@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS match_sync_state (
 CREATE TABLE IF NOT EXISTS bets (
   id text PRIMARY KEY,
   bettor_id text NOT NULL REFERENCES bettors(id),
-  match_id text NOT NULL REFERENCES matches(id),
+  match_id text REFERENCES matches(id),
   market text NOT NULL CHECK (btrim(market) <> ''),
   pick text NOT NULL CHECK (btrim(pick) <> ''),
   stake numeric(12, 2) NOT NULL CHECK (stake > 0),
@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS bets (
     )
   )
 );
+
+ALTER TABLE bets ALTER COLUMN match_id DROP NOT NULL;
 
 CREATE INDEX IF NOT EXISTS bettors_active_idx ON bettors (is_active);
 CREATE INDEX IF NOT EXISTS matches_kickoff_at_idx ON matches (kickoff_at);

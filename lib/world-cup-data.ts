@@ -45,7 +45,7 @@ export type BetRecord = {
   bettorId: string;
   bettorName: string;
   bettorColor: string;
-  matchId: string;
+  matchId: string | null;
   market: string;
   pick: string;
   stake: number;
@@ -54,7 +54,7 @@ export type BetRecord = {
   isWin: boolean | null;
   submittedAt: string;
   settledAt: string | null;
-  match: Match;
+  match: Match | null;
 };
 
 export type BettorSummary = {

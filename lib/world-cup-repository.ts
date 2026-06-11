@@ -53,7 +53,7 @@ type BetRow = QueryResultRow & {
   bettor_id: string;
   bettor_name: string;
   bettor_color: string;
-  match_id: string;
+  match_id: string | null;
   market: string;
   pick: string;
   stake: string;
@@ -62,14 +62,14 @@ type BetRow = QueryResultRow & {
   is_win: boolean | null;
   submitted_at: Date | string;
   settled_at: Date | string | null;
-  source_id: string;
-  kickoff_at: Date | string;
-  stage: string;
+  source_id: string | null;
+  kickoff_at: Date | string | null;
+  stage: string | null;
   group_name: string | null;
-  home_team: string;
-  away_team: string;
+  home_team: string | null;
+  away_team: string | null;
   venue: string | null;
-  match_status: MatchStatus;
+  match_status: MatchStatus | null;
   home_score: number | null;
   away_score: number | null;
 };
@@ -95,7 +95,7 @@ type UpdateBettorInput = Partial<CreateBettorInput> & {
 
 type CreateBetInput = {
   bettorId: string;
-  matchId: string;
+  matchId: string | null;
   market: string;
   pick: string;
   stake: number;
@@ -155,6 +155,29 @@ function toMatch(row: MatchRow): Match {
 }
 
 function toBetRecord(row: BetRow): BetRecord {
+  const match =
+    row.match_id &&
+    row.source_id &&
+    row.kickoff_at &&
+    row.stage &&
+    row.home_team &&
+    row.away_team &&
+    row.match_status
+      ? {
+          awayScore: row.away_score,
+          awayTeam: row.away_team,
+          groupName: row.group_name,
+          homeScore: row.home_score,
+          homeTeam: row.home_team,
+          id: row.match_id,
+          kickoffAt: toIso(row.kickoff_at),
+          sourceId: row.source_id,
+          stage: row.stage,
+          status: row.match_status,
+          venue: row.venue,
+        }
+      : null;
+
   return {
     bettorColor: row.bettor_color,
     bettorId: row.bettor_id,
@@ -162,19 +185,7 @@ function toBetRecord(row: BetRow): BetRecord {
     id: row.id,
     isWin: row.is_win,
     market: row.market,
-    match: {
-      awayScore: row.away_score,
-      awayTeam: row.away_team,
-      groupName: row.group_name,
-      homeScore: row.home_score,
-      homeTeam: row.home_team,
-      id: row.match_id,
-      kickoffAt: toIso(row.kickoff_at),
-      sourceId: row.source_id,
-      stage: row.stage,
-      status: row.match_status,
-      venue: row.venue,
-    },
+    match,
     matchId: row.match_id,
     payout: row.payout === null ? null : Number(row.payout),
     pick: row.pick,
@@ -296,7 +307,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
               m.away_team, m.venue, m.status AS match_status, m.home_score, m.away_score
        FROM bets b
        JOIN bettors br ON br.id = b.bettor_id
-       JOIN matches m ON m.id = b.match_id
+       LEFT JOIN matches m ON m.id = b.match_id
        ORDER BY b.submitted_at DESC`,
     ),
     query<MatchSyncRow>(
@@ -382,13 +393,15 @@ export async function createPendingBet(input: CreateBetInput) {
       throw new DataInputError("同事不存在或已停用");
     }
 
-    const matchResult = await client.query(
-      "SELECT id FROM matches WHERE id = $1",
-      [input.matchId],
-    );
+    if (input.matchId) {
+      const matchResult = await client.query(
+        "SELECT id FROM matches WHERE id = $1",
+        [input.matchId],
+      );
 
-    if (matchResult.rowCount === 0) {
-      throw new DataInputError("比赛不存在");
+      if (matchResult.rowCount === 0) {
+        throw new DataInputError("比赛不存在");
+      }
     }
 
     return client.query(

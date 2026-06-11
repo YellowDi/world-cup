@@ -34,6 +34,7 @@ import { Liveline } from "liveline";
 import { emptyDashboardSnapshot } from "@/lib/world-cup-data";
 
 const chartWindow = 60 * 60 * 24 * 5;
+const bettingWindowMs = 1000 * 60 * 60 * 24 * 7;
 const glassSurfaceClass =
   "overflow-hidden rounded-3xl border border-border bg-surface/80 shadow-lg backdrop-blur-md";
 
@@ -44,6 +45,14 @@ type BettorBetGroup = {
   profit: number;
   bets: BetRecord[];
 };
+
+type BetType = "match-result" | "score" | "champion";
+
+const resultPickOptions = [
+  { label: "主胜", value: "主胜" },
+  { label: "平局", value: "平局" },
+  { label: "客胜", value: "客胜" },
+];
 
 const currencyFormatter = new Intl.NumberFormat("zh-CN", {
   currency: "CNY",
@@ -144,6 +153,18 @@ function formatMatchOption(
   dateTimeFormatter: Intl.DateTimeFormat,
 ) {
   return `${dateTimeFormatter.format(new Date(match.kickoffAt))} · ${formatMatchTitle(match)}`;
+}
+
+function formatBetContext(bet: BetRecord) {
+  return bet.match ? formatMatchTitle(bet.match) : "冠军猜测";
+}
+
+function formatBetMeta(bet: BetRecord, dateTimeFormatter: Intl.DateTimeFormat) {
+  const betLabel = `${bet.market}：${bet.pick}`;
+
+  return bet.match
+    ? `${dateTimeFormatter.format(new Date(bet.match.kickoffAt))} · ${betLabel}`
+    : betLabel;
 }
 
 function getStatusLabel(status: Match["status"]) {
@@ -315,13 +336,20 @@ export function WorldCupDashboard() {
 
     const form = event.currentTarget;
     const formData = new FormData(form);
+    const betType = getFormString(formData, "betType");
 
     await runAction("下注记录已提交", async () => {
       await requestJson("/api/bets", {
         body: JSON.stringify({
+          awayScore: getFormString(formData, "awayScore"),
+          betType,
           bettorId: getFormString(formData, "bettorId"),
-          market: getFormString(formData, "market"),
+          champions: formData
+            .getAll("champions")
+            .map((value) => String(value).trim())
+            .filter(Boolean),
           matchId: getFormString(formData, "matchId"),
+          homeScore: getFormString(formData, "homeScore"),
           pick: getFormString(formData, "pick"),
           stake: Number(getFormString(formData, "stake")),
         }),
@@ -825,6 +853,77 @@ function DashboardSidebar({
   onSyncMatches: () => void;
   onUpdateBettor: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [selectedBetType, setSelectedBetType] =
+    useState<BetType>("match-result");
+  const [selectedChampionKeys, setSelectedChampionKeys] = useState<Set<string>>(
+    new Set(),
+  );
+  const bettableMatches = useMemo(() => {
+    const now = Date.now();
+    const cutoff = now + bettingWindowMs;
+
+    return snapshot.matches.filter((match) => {
+      const kickoffTime = new Date(match.kickoffAt).getTime();
+
+      return (
+        match.status !== "finished" &&
+        kickoffTime >= now &&
+        kickoffTime <= cutoff
+      );
+    });
+  }, [snapshot.matches]);
+  const matchOptions = useMemo(
+    () =>
+      bettableMatches.map((match) => ({
+        label: formatMatchOption(match, dateTimeFormatter),
+        value: match.id,
+      })),
+    [bettableMatches, dateTimeFormatter],
+  );
+  const championCountryOptions = useMemo(() => {
+    const countries = new Set<string>();
+    const addCountry = (country: string) => {
+      const normalizedCountry = country.trim();
+
+      if (normalizedCountry) {
+        countries.add(normalizedCountry);
+      }
+    };
+
+    for (const match of snapshot.matches) {
+      addCountry(match.homeTeam);
+      addCountry(match.awayTeam);
+    }
+
+    return Array.from(countries)
+      .sort((a, b) => a.localeCompare(b, "zh-CN"))
+      .map((country) => ({
+        label: country,
+        value: country,
+      }));
+  }, [snapshot.matches]);
+  const isBetSubmitDisabled =
+    isSubmitting ||
+    snapshot.activeBettors.length === 0 ||
+    (selectedBetType === "champion"
+      ? championCountryOptions.length === 0 || selectedChampionKeys.size === 0
+      : bettableMatches.length === 0);
+
+  useEffect(() => {
+    const availableCountries = new Set(
+      championCountryOptions.map((option) => option.value),
+    );
+
+    setSelectedChampionKeys(
+      (selectedKeys) =>
+        new Set(
+          Array.from(selectedKeys).filter((country) =>
+            availableCountries.has(country),
+          ),
+        ),
+    );
+  }, [championCountryOptions]);
+
   return (
     <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-2rem)] lg:max-h-[calc(100dvh-2rem)]">
       <Surface
@@ -835,7 +934,7 @@ function DashboardSidebar({
         <MaintenanceModal
           buttonLabel="提交下注"
           buttonVariant="primary"
-          description="选择同事、比赛、玩法和下注额"
+          description="选择投注方式并填写对应内容"
           isDisabled={isLoading}
           status={
             <StatusMessage
@@ -847,51 +946,125 @@ function DashboardSidebar({
           }
           title="提交下注"
         >
-          <Form className="grid gap-3" onSubmit={onCreateBet}>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <SelectField
-                disabled={isSubmitting || snapshot.activeBettors.length === 0}
-                label="同事"
-                name="bettorId"
-                options={snapshot.activeBettors.map((bettor) => ({
-                  label: bettor.name,
-                  value: bettor.id,
-                }))}
-              />
-              <SelectField
-                disabled={isSubmitting || snapshot.matches.length === 0}
-                label="比赛"
-                name="matchId"
-                options={snapshot.matches.map((match) => ({
-                  label: formatMatchOption(match, dateTimeFormatter),
-                  value: match.id,
-                }))}
-              />
-              <Field
-                required
-                defaultValue="胜平负"
-                label="玩法"
-                name="market"
-              />
-              <Field required label="选择" name="pick" />
-              <Field
-                required
-                label="下注额"
-                min="0.01"
-                name="stake"
-                step="0.01"
-                type="number"
-              />
-            </div>
-            <SubmitButton
-              disabled={
-                isSubmitting ||
-                snapshot.activeBettors.length === 0 ||
-                snapshot.matches.length === 0
+          <Form
+            className="grid gap-4"
+            onReset={() => setSelectedChampionKeys(new Set())}
+            onSubmit={onCreateBet}
+          >
+            <input name="betType" type="hidden" value={selectedBetType} />
+            <Tabs
+              className="grid gap-3"
+              selectedKey={selectedBetType}
+              onSelectionChange={(key) =>
+                setSelectedBetType(String(key) as BetType)
               }
             >
-              提交下注
-            </SubmitButton>
+              <Tabs.ListContainer>
+                <Tabs.List aria-label="投注方式">
+                  <Tabs.Tab id="match-result">
+                    <Tabs.Indicator />
+                    下注输赢
+                  </Tabs.Tab>
+                  <Tabs.Tab id="score">
+                    <Tabs.Indicator />
+                    下注比分
+                  </Tabs.Tab>
+                  <Tabs.Tab id="champion">
+                    <Tabs.Indicator />
+                    冠军猜测
+                  </Tabs.Tab>
+                </Tabs.List>
+              </Tabs.ListContainer>
+
+              <Tabs.Panel className="p-0" id="match-result">
+                {selectedBetType === "match-result" ? (
+                  <div className="grid gap-3">
+                    <CommonBetFields
+                      bettors={snapshot.activeBettors}
+                      isSubmitting={isSubmitting}
+                    />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-2">
+                        <SelectField
+                          disabled={
+                            isSubmitting || bettableMatches.length === 0
+                          }
+                          label="比赛"
+                          name="matchId"
+                          options={matchOptions}
+                        />
+                        <MatchRoleHint />
+                      </div>
+                      <SelectField
+                        disabled={isSubmitting}
+                        label="选择"
+                        name="pick"
+                        options={resultPickOptions}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </Tabs.Panel>
+              <Tabs.Panel className="p-0" id="score">
+                {selectedBetType === "score" ? (
+                  <div className="grid gap-3">
+                    <CommonBetFields
+                      bettors={snapshot.activeBettors}
+                      isSubmitting={isSubmitting}
+                    />
+                    <div className="grid gap-2">
+                      <SelectField
+                        disabled={isSubmitting || bettableMatches.length === 0}
+                        label="比赛"
+                        name="matchId"
+                        options={matchOptions}
+                      />
+                      <MatchRoleHint />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field
+                        required
+                        label="主队比分"
+                        min="0"
+                        name="homeScore"
+                        step="1"
+                        type="number"
+                      />
+                      <Field
+                        required
+                        label="客队比分"
+                        min="0"
+                        name="awayScore"
+                        step="1"
+                        type="number"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </Tabs.Panel>
+              <Tabs.Panel className="p-0" id="champion">
+                {selectedBetType === "champion" ? (
+                  <div className="grid gap-3">
+                    <CommonBetFields
+                      bettors={snapshot.activeBettors}
+                      isSubmitting={isSubmitting}
+                    />
+                    <MultiSelectField
+                      disabled={
+                        isSubmitting || championCountryOptions.length === 0
+                      }
+                      label="冠军球队"
+                      name="champions"
+                      options={championCountryOptions}
+                      selectedValues={selectedChampionKeys}
+                      onChange={setSelectedChampionKeys}
+                    />
+                  </div>
+                ) : null}
+              </Tabs.Panel>
+            </Tabs>
+
+            <SubmitButton disabled={isBetSubmitDisabled}>提交下注</SubmitButton>
           </Form>
         </MaintenanceModal>
       </Surface>
@@ -925,6 +1098,44 @@ function DashboardSidebar({
         />
       </div>
     </aside>
+  );
+}
+
+function CommonBetFields({
+  bettors,
+  isSubmitting,
+}: {
+  bettors: Bettor[];
+  isSubmitting: boolean;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <SelectField
+        disabled={isSubmitting || bettors.length === 0}
+        label="同事"
+        name="bettorId"
+        options={bettors.map((bettor) => ({
+          label: bettor.name,
+          value: bettor.id,
+        }))}
+      />
+      <Field
+        required
+        label="金额"
+        min="0.01"
+        name="stake"
+        step="0.01"
+        type="number"
+      />
+    </div>
+  );
+}
+
+function MatchRoleHint() {
+  return (
+    <p className="text-xs text-muted">
+      主队是比赛名称中 vs 左侧球队，客队是右侧球队。
+    </p>
   );
 }
 
@@ -1117,11 +1328,10 @@ function BetRecordRow({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate text-sm font-medium">
-            {formatMatchTitle(bet.match)}
+            {formatBetContext(bet)}
           </div>
           <div className="mt-1 truncate text-xs text-muted">
-            {dateTimeFormatter.format(new Date(bet.match.kickoffAt))} ·{" "}
-            {bet.market}：{bet.pick}
+            {formatBetMeta(bet, dateTimeFormatter)}
           </div>
         </div>
         <Chip className="shrink-0" size="sm" variant="soft">
@@ -1294,6 +1504,65 @@ function SelectField({
   );
 }
 
+function MultiSelectField({
+  disabled,
+  label,
+  name,
+  options,
+  selectedValues,
+  onChange,
+}: {
+  disabled?: boolean;
+  label: string;
+  name: string;
+  options: { label: string; value: string }[];
+  selectedValues: Set<string>;
+  onChange: (selectedValues: Set<string>) => void;
+}) {
+  return (
+    <div className="grid gap-1.5">
+      {Array.from(selectedValues).map((value) => (
+        <input key={value} name={name} type="hidden" value={value} />
+      ))}
+      <Label>{label}</Label>
+      <div
+        aria-disabled={disabled || undefined}
+        className="max-h-60 overflow-y-auto rounded-md border border-border bg-surface-secondary aria-disabled:opacity-50"
+      >
+        <ListBox
+          aria-label={label}
+          className="p-1"
+          selectedKeys={selectedValues}
+          selectionMode="multiple"
+          onSelectionChange={(selection) => {
+            if (selection === "all") {
+              onChange(new Set(options.map((option) => option.value)));
+
+              return;
+            }
+
+            if (!disabled) {
+              onChange(new Set(Array.from(selection).map(String)));
+            }
+          }}
+        >
+          {options.map((option) => (
+            <ListBox.Item
+              key={option.value}
+              id={option.value}
+              isDisabled={disabled}
+              textValue={option.label}
+            >
+              {option.label}
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </div>
+    </div>
+  );
+}
+
 function SubmitButton({
   children,
   disabled,
@@ -1376,7 +1645,7 @@ function PendingBetForm({
       <input name="id" type="hidden" value={bet.id} />
       <div className="min-w-0">
         <div className="truncate text-sm font-medium">
-          {bet.bettorName} · {formatMatchTitle(bet.match)}
+          {bet.bettorName} · {formatBetContext(bet)}
         </div>
         <div className="mt-1 truncate text-xs text-muted">
           {bet.market}：{bet.pick} · {formatCurrency(bet.stake)}

@@ -1,4 +1,5 @@
 import { FC, useEffect, useState } from "react";
+import { Button } from "@heroui/react";
 import { useTheme } from "next-themes";
 import clsx from "clsx";
 
@@ -25,17 +26,17 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({ className }) => {
   if (!isMounted) return <div aria-hidden className="w-6 h-6" />;
 
   return (
-    <button
+    <Button
+      isIconOnly
       aria-label={`Switch to ${isLight ? "dark" : "light"} mode`}
       className={clsx(
-        "px-px transition-opacity hover:opacity-80 cursor-pointer",
-        "inline-flex items-center justify-center",
-        "w-auto h-auto bg-transparent rounded-lg text-muted",
+        "h-auto w-auto min-w-0 bg-transparent px-px text-muted hover:bg-transparent hover:opacity-80",
         className,
       )}
-      onClick={handleToggle}
+      variant="ghost"
+      onPress={handleToggle}
     >
       {isLight ? <SunFilledIcon size={22} /> : <MoonFilledIcon size={22} />}
-    </button>
+    </Button>
   );
 };

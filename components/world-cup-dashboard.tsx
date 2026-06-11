@@ -9,6 +9,21 @@ import type {
 import type { FormEvent, ReactNode } from "react";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Chip,
+  FieldError,
+  Form,
+  Input,
+  Label,
+  ListBox,
+  Select,
+  Table,
+  TextField,
+} from "@heroui/react";
 import { Liveline } from "liveline";
 
 import { emptyDashboardSnapshot } from "@/lib/world-cup-data";
@@ -325,24 +340,25 @@ export function WorldCupDashboard() {
         </div>
       </section>
 
-      <section
+      <Card
         className="relative z-10 -mt-8 rounded-lg border border-white/10 bg-[#111418] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.32)] md:p-5"
         id="profit-chart"
       >
-        <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+        <Card.Header className="flex flex-col justify-between gap-3 p-0 md:flex-row md:items-end">
           <div>
-            <h2 className="text-xl font-semibold tracking-normal text-white">
+            <Card.Title className="text-xl font-semibold tracking-normal text-white">
               累计收益走势
-            </h2>
-            <p className="mt-1 text-sm text-zinc-400">
+            </Card.Title>
+            <Card.Description className="mt-1 text-sm text-zinc-400">
               支持按时间窗口查看盈亏变化
-            </p>
+            </Card.Description>
           </div>
           <div className="flex flex-wrap gap-2">
             {leaderRows.map((row) => (
-              <span
+              <Chip
                 key={row.id}
-                className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1 text-sm text-zinc-200"
+                className="border border-white/10 bg-white/[0.04] text-zinc-200"
+                variant="secondary"
               >
                 <span
                   aria-hidden="true"
@@ -353,12 +369,12 @@ export function WorldCupDashboard() {
                 <strong className={getProfitClass(row.profit)}>
                   {formatSignedCurrency(row.profit)}
                 </strong>
-              </span>
+              </Chip>
             ))}
           </div>
-        </div>
+        </Card.Header>
 
-        <div className="h-[430px] overflow-hidden rounded-lg border border-white/10 bg-[#07090c] p-2 md:h-[520px]">
+        <Card.Content className="mt-4 h-[430px] overflow-hidden rounded-lg border border-white/10 bg-[#07090c] p-2 md:h-[520px]">
           <Liveline
             fill
             grid
@@ -384,8 +400,8 @@ export function WorldCupDashboard() {
               { label: "24H", secs: 60 * 60 * 24 },
             ]}
           />
-        </div>
-      </section>
+        </Card.Content>
+      </Card>
 
       <section className="mt-6" id="data-admin">
         <div className="mb-3 flex flex-col justify-between gap-3 md:flex-row md:items-end">
@@ -408,14 +424,14 @@ export function WorldCupDashboard() {
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           <div className="grid gap-4 lg:grid-cols-2">
             <Panel title="同事名单">
-              <form className="grid gap-3" onSubmit={handleCreateBettor}>
+              <Form className="grid gap-3" onSubmit={handleCreateBettor}>
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_88px]">
                   <Field required label="姓名" name="name" />
                   <Field label="部门" name="team" />
                   <ColorField label="颜色" name="color" />
                 </div>
                 <SubmitButton disabled={isSubmitting}>新增同事</SubmitButton>
-              </form>
+              </Form>
 
               <div className="mt-4 grid gap-2">
                 {snapshot.bettors.length === 0 ? (
@@ -438,9 +454,13 @@ export function WorldCupDashboard() {
                 <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-zinc-300">
                   <div className="flex items-center justify-between gap-3">
                     <span>{snapshot.schedule.sourceName}</span>
-                    <span className="rounded-md bg-white/[0.06] px-2 py-1 text-xs text-zinc-400">
+                    <Chip
+                      className="bg-white/[0.06] text-zinc-400"
+                      size="sm"
+                      variant="soft"
+                    >
                       {snapshot.matches.length} 场
-                    </span>
+                    </Chip>
                   </div>
                   <div className="mt-2 text-xs leading-5 text-zinc-500">
                     {snapshot.schedule.lastSyncedAt
@@ -453,7 +473,7 @@ export function WorldCupDashboard() {
                 </div>
                 <ActionButton
                   disabled={isSubmitting}
-                  onClick={() => void handleSyncMatches()}
+                  onPress={() => void handleSyncMatches()}
                 >
                   同步赛历
                 </ActionButton>
@@ -479,7 +499,7 @@ export function WorldCupDashboard() {
 
           <div className="grid gap-4">
             <Panel title="提交下注">
-              <form className="grid gap-3" onSubmit={handleCreateBet}>
+              <Form className="grid gap-3" onSubmit={handleCreateBet}>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <SelectField
                     disabled={
@@ -526,7 +546,7 @@ export function WorldCupDashboard() {
                 >
                   提交下注
                 </SubmitButton>
-              </form>
+              </Form>
             </Panel>
 
             <Panel title="待结算">
@@ -560,16 +580,19 @@ export function WorldCupDashboard() {
             </p>
           </div>
           {snapshot.schedule.lastSyncedAt ? (
-            <span className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-1 text-sm text-zinc-300">
+            <Chip
+              className="border border-white/10 bg-white/[0.04] text-zinc-300"
+              variant="secondary"
+            >
               {dateTimeFormatter.format(
                 new Date(snapshot.schedule.lastSyncedAt),
               )}
               同步
-            </span>
+            </Chip>
           ) : null}
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-white/10 bg-[#111418]">
+        <Card className="overflow-hidden rounded-lg border border-white/10 bg-[#111418] p-0">
           {upcomingMatches.length === 0 ? (
             <div className="p-4">
               <EmptyState text="暂无未来赛程。" />
@@ -583,7 +606,7 @@ export function WorldCupDashboard() {
               />
             ))
           )}
-        </div>
+        </Card>
       </section>
 
       <section className="mt-6" id="profit-table">
@@ -594,48 +617,71 @@ export function WorldCupDashboard() {
             </h2>
             <p className="mt-1 text-sm text-zinc-400">按累计净收益降序排列</p>
           </div>
-          <span className="hidden rounded-md border border-white/10 bg-white/[0.04] px-3 py-1 text-sm text-zinc-300 sm:inline-flex">
+          <Chip
+            className="hidden border border-white/10 bg-white/[0.04] text-zinc-300 sm:inline-flex"
+            variant="secondary"
+          >
             {snapshot.rows.length} 人参赛
-          </span>
+          </Chip>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-white/10 bg-[#111418]">
-          <table className="w-full min-w-[1040px] text-left text-sm">
-            <thead className="border-b border-white/10 bg-white/[0.04] text-xs uppercase tracking-[0.18em] text-zinc-400">
-              <tr>
-                <th className="px-4 py-3 font-medium">排名</th>
-                <th className="px-4 py-3 font-medium">同事</th>
-                <th className="px-4 py-3 text-right font-medium">累计收益</th>
-                <th className="px-4 py-3 text-right font-medium">ROI</th>
-                <th className="px-4 py-3 text-right font-medium">下注额</th>
-                <th className="px-4 py-3 text-right font-medium">返奖</th>
-                <th className="px-4 py-3 text-right font-medium">命中率</th>
-                <th className="px-4 py-3 font-medium">优势玩法</th>
-                <th className="px-4 py-3 font-medium">最新选择</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10">
-              {snapshot.rows.length === 0 ? (
-                <tr>
-                  <td
-                    className="px-4 py-10 text-center text-zinc-400"
-                    colSpan={9}
-                  >
+        <Table
+          className="overflow-hidden rounded-lg border border-white/10 bg-[#111418]"
+          variant="secondary"
+        >
+          <Table.ScrollContainer className="overflow-x-auto">
+            <Table.Content
+              aria-label="个人收益详情"
+              className="min-w-[1040px] text-sm"
+            >
+              <Table.Header className="border-b border-white/10 bg-white/[0.04] text-xs uppercase tracking-[0.18em] text-zinc-400">
+                <Table.Column className="px-4 py-3 font-medium">
+                  排名
+                </Table.Column>
+                <Table.Column isRowHeader className="px-4 py-3 font-medium">
+                  同事
+                </Table.Column>
+                <Table.Column className="px-4 py-3 text-right font-medium">
+                  累计收益
+                </Table.Column>
+                <Table.Column className="px-4 py-3 text-right font-medium">
+                  ROI
+                </Table.Column>
+                <Table.Column className="px-4 py-3 text-right font-medium">
+                  下注额
+                </Table.Column>
+                <Table.Column className="px-4 py-3 text-right font-medium">
+                  返奖
+                </Table.Column>
+                <Table.Column className="px-4 py-3 text-right font-medium">
+                  命中率
+                </Table.Column>
+                <Table.Column className="px-4 py-3 font-medium">
+                  优势玩法
+                </Table.Column>
+                <Table.Column className="px-4 py-3 font-medium">
+                  最新选择
+                </Table.Column>
+              </Table.Header>
+              <Table.Body
+                renderEmptyState={() => (
+                  <div className="px-4 py-10 text-center text-zinc-400">
                     暂无收益数据，新增同事并提交下注后会显示排名。
-                  </td>
-                </tr>
-              ) : (
-                snapshot.rows.map((row) => (
-                  <tr
+                  </div>
+                )}
+              >
+                {snapshot.rows.map((row) => (
+                  <Table.Row
                     key={row.id}
                     className="transition-colors hover:bg-white/[0.035]"
+                    id={row.id}
                   >
-                    <td className="px-4 py-4">
+                    <Table.Cell className="px-4 py-4">
                       <span className="inline-flex size-7 items-center justify-center rounded-md bg-white/[0.06] font-semibold text-zinc-200">
                         {row.rank}
                       </span>
-                    </td>
-                    <td className="px-4 py-4">
+                    </Table.Cell>
+                    <Table.Cell className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <span
                           aria-hidden="true"
@@ -646,9 +692,14 @@ export function WorldCupDashboard() {
                           <div className="font-medium text-white">
                             {row.name}
                             {!row.isActive ? (
-                              <span className="ml-2 rounded-md bg-white/[0.06] px-2 py-0.5 text-xs font-normal text-zinc-500">
+                              <Chip
+                                className="ml-2"
+                                color="default"
+                                size="sm"
+                                variant="soft"
+                              >
                                 停用
-                              </span>
+                              </Chip>
                             ) : null}
                           </div>
                           <div className="text-xs text-zinc-500">
@@ -656,47 +707,49 @@ export function WorldCupDashboard() {
                           </div>
                         </div>
                       </div>
-                    </td>
-                    <td
+                    </Table.Cell>
+                    <Table.Cell
                       className={`px-4 py-4 text-right font-semibold tabular-nums ${getProfitClass(row.profit)}`}
                     >
                       {formatSignedCurrency(row.profit)}
-                    </td>
-                    <td className="px-4 py-4 text-right tabular-nums text-zinc-200">
+                    </Table.Cell>
+                    <Table.Cell className="px-4 py-4 text-right tabular-nums text-zinc-200">
                       {percentFormatter.format(row.roi)}
-                    </td>
-                    <td className="px-4 py-4 text-right tabular-nums text-zinc-300">
+                    </Table.Cell>
+                    <Table.Cell className="px-4 py-4 text-right tabular-nums text-zinc-300">
                       {formatCurrency(row.stake)}
-                    </td>
-                    <td className="px-4 py-4 text-right tabular-nums text-zinc-300">
+                    </Table.Cell>
+                    <Table.Cell className="px-4 py-4 text-right tabular-nums text-zinc-300">
                       {formatCurrency(row.payout)}
-                    </td>
-                    <td className="px-4 py-4 text-right tabular-nums text-zinc-300">
+                    </Table.Cell>
+                    <Table.Cell className="px-4 py-4 text-right tabular-nums text-zinc-300">
                       {row.wins}/{row.settled}
-                    </td>
-                    <td className="px-4 py-4 text-zinc-300">
+                    </Table.Cell>
+                    <Table.Cell className="px-4 py-4 text-zinc-300">
                       {row.bestMarket}
-                    </td>
-                    <td className="px-4 py-4 text-zinc-300">
-                      <span className="mr-2 rounded-md bg-white/[0.06] px-2 py-1 text-xs text-zinc-400">
+                    </Table.Cell>
+                    <Table.Cell className="px-4 py-4 text-zinc-300">
+                      <Chip className="mr-2" size="sm" variant="soft">
                         {row.pending} 待
-                      </span>
+                      </Chip>
                       {row.latestPick}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
+        </Table>
       </section>
 
       <section className="mt-6">
-        <div className="rounded-lg border border-white/10 bg-[#111418] p-4">
-          <h2 className="text-xl font-semibold tracking-normal text-white">
-            最近下注
-          </h2>
-          <div className="mt-3 grid gap-2">
+        <Card className="rounded-lg border border-white/10 bg-[#111418] p-4">
+          <Card.Header className="p-0">
+            <Card.Title className="text-xl font-semibold tracking-normal text-white">
+              最近下注
+            </Card.Title>
+          </Card.Header>
+          <Card.Content className="mt-3 grid gap-2 p-0">
             {snapshot.recentBets.length === 0 ? (
               <EmptyState text="暂无下注记录。" />
             ) : (
@@ -704,8 +757,8 @@ export function WorldCupDashboard() {
                 <RecentBet key={bet.id} bet={bet} />
               ))
             )}
-          </div>
-        </div>
+          </Card.Content>
+        </Card>
       </section>
     </div>
   );
@@ -729,27 +782,29 @@ function StatusMessage({
     return null;
   }
 
+  const status =
+    loadError || actionError ? "danger" : notice ? "success" : "accent";
+
   return (
-    <div
-      className={`rounded-md border px-3 py-2 text-sm ${
-        loadError || actionError
-          ? "border-rose-400/30 bg-rose-400/10 text-rose-200"
-          : "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-      }`}
-    >
-      {message}
-    </div>
+    <Alert className="max-w-full rounded-md px-3 py-2" status={status}>
+      <Alert.Indicator />
+      <Alert.Content>
+        <Alert.Title className="text-sm font-medium">{message}</Alert.Title>
+      </Alert.Content>
+    </Alert>
   );
 }
 
 function Panel({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <section className="rounded-lg border border-white/10 bg-[#111418] p-4">
-      <h3 className="text-base font-semibold tracking-normal text-white">
-        {title}
-      </h3>
-      <div className="mt-3">{children}</div>
-    </section>
+    <Card className="rounded-lg border border-white/10 bg-[#111418] p-4">
+      <Card.Header className="p-0">
+        <Card.Title className="text-base font-semibold tracking-normal text-white">
+          {title}
+        </Card.Title>
+      </Card.Header>
+      <Card.Content className="mt-3 p-0">{children}</Card.Content>
+    </Card>
   );
 }
 
@@ -771,18 +826,23 @@ function Field({
   type?: string;
 }) {
   return (
-    <label className="grid gap-1 text-sm text-zinc-300">
-      <span>{label}</span>
-      <input
-        className="min-h-10 rounded-md border border-white/10 bg-[#07090c] px-3 py-2 text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 focus:border-sky-400"
-        defaultValue={defaultValue}
+    <TextField
+      fullWidth
+      defaultValue={defaultValue}
+      isRequired={required}
+      name={name}
+      type={type}
+      variant="secondary"
+    >
+      <Label>{label}</Label>
+      <Input
+        className="min-h-10 border-white/10 bg-[#07090c] text-zinc-100"
         min={min}
-        name={name}
-        required={required}
         step={step}
-        type={type}
+        variant="secondary"
       />
-    </label>
+      <FieldError />
+    </TextField>
   );
 }
 
@@ -796,15 +856,19 @@ function ColorField({
   name: string;
 }) {
   return (
-    <label className="grid gap-1 text-sm text-zinc-300">
-      <span>{label}</span>
-      <input
-        className="min-h-10 rounded-md border border-white/10 bg-[#07090c] px-2 py-1 outline-none transition-colors focus:border-sky-400"
-        defaultValue={defaultValue}
-        name={name}
-        type="color"
+    <TextField
+      fullWidth
+      defaultValue={defaultValue}
+      name={name}
+      type="color"
+      variant="secondary"
+    >
+      <Label>{label}</Label>
+      <Input
+        className="min-h-10 border-white/10 bg-[#07090c] px-2 py-1"
+        variant="secondary"
       />
-    </label>
+    </TextField>
   );
 }
 
@@ -820,22 +884,36 @@ function SelectField({
   options: { label: string; value: string }[];
 }) {
   return (
-    <label className="grid gap-1 text-sm text-zinc-300">
-      <span>{label}</span>
-      <select
-        required
-        className="min-h-10 rounded-md border border-white/10 bg-[#07090c] px-3 py-2 text-zinc-100 outline-none transition-colors focus:border-sky-400 disabled:cursor-not-allowed disabled:text-zinc-600"
-        disabled={disabled}
-        name={name}
-      >
-        <option value="">请选择</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <Select
+      fullWidth
+      isRequired
+      className="min-w-0"
+      isDisabled={disabled}
+      name={name}
+      placeholder="请选择"
+      variant="secondary"
+    >
+      <Label>{label}</Label>
+      <Select.Trigger className="min-h-10 border-white/10 bg-[#07090c] text-zinc-100">
+        <Select.Value />
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover className="max-h-80">
+        <ListBox>
+          {options.map((option) => (
+            <ListBox.Item
+              key={option.value}
+              id={option.value}
+              textValue={option.label}
+            >
+              {option.label}
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </Select.Popover>
+      <FieldError />
+    </Select>
   );
 }
 
@@ -847,34 +925,36 @@ function SubmitButton({
   disabled?: boolean;
 }) {
   return (
-    <button
-      className="min-h-10 rounded-md bg-sky-400 px-4 py-2 text-sm font-semibold text-[#061016] transition-colors hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
-      disabled={disabled}
+    <Button
+      fullWidth
+      className="min-h-10 bg-sky-400 text-sm font-semibold text-[#061016] hover:bg-sky-300"
+      isDisabled={disabled}
       type="submit"
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
 function ActionButton({
   children,
   disabled,
-  onClick,
+  onPress,
 }: {
   children: ReactNode;
   disabled?: boolean;
-  onClick: () => void;
+  onPress: () => void;
 }) {
   return (
-    <button
-      className="min-h-10 rounded-md bg-sky-400 px-4 py-2 text-sm font-semibold text-[#061016] transition-colors hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
-      disabled={disabled}
+    <Button
+      fullWidth
+      className="min-h-10 bg-sky-400 text-sm font-semibold text-[#061016] hover:bg-sky-300"
+      isDisabled={disabled}
       type="button"
-      onClick={onClick}
+      onPress={onPress}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -888,7 +968,7 @@ function BettorEditForm({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <form
+    <Form
       className="grid gap-2 rounded-md border border-white/10 bg-white/[0.03] p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_64px_72px_72px] sm:items-end"
       onSubmit={onSubmit}
     >
@@ -896,17 +976,22 @@ function BettorEditForm({
       <Field required defaultValue={bettor.name} label="姓名" name="name" />
       <Field defaultValue={bettor.team} label="部门" name="team" />
       <ColorField defaultValue={bettor.color} label="颜色" name="color" />
-      <label className="flex min-h-10 items-center gap-2 text-sm text-zinc-300">
-        <input
-          className="size-4 accent-sky-400"
-          defaultChecked={bettor.isActive}
-          name="isActive"
-          type="checkbox"
-        />
-        启用
-      </label>
+      <Checkbox
+        className="min-h-10"
+        defaultSelected={bettor.isActive}
+        name="isActive"
+        value="on"
+        variant="secondary"
+      >
+        <Checkbox.Control>
+          <Checkbox.Indicator />
+        </Checkbox.Control>
+        <Checkbox.Content>
+          <Label>启用</Label>
+        </Checkbox.Content>
+      </Checkbox>
       <SubmitButton disabled={disabled}>保存</SubmitButton>
-    </form>
+    </Form>
   );
 }
 
@@ -920,7 +1005,7 @@ function PendingBetForm({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <form
+    <Form
       className="grid gap-2 rounded-md border border-white/10 bg-white/[0.03] p-3 sm:grid-cols-[minmax(0,1fr)_120px_104px_72px] sm:items-end"
       onSubmit={onSubmit}
     >
@@ -950,7 +1035,7 @@ function PendingBetForm({
         ]}
       />
       <SubmitButton disabled={disabled}>结算</SubmitButton>
-    </form>
+    </Form>
   );
 }
 
@@ -970,9 +1055,13 @@ function MatchRow({
           {match.groupName ? ` · ${match.groupName}` : ""}
         </div>
       </div>
-      <span className="shrink-0 rounded-md bg-white/[0.06] px-2 py-1 text-xs text-zinc-400">
+      <Chip
+        className="shrink-0 bg-white/[0.06] text-zinc-400"
+        size="sm"
+        variant="soft"
+      >
         {getStatusLabel(match.status)}
-      </span>
+      </Chip>
     </div>
   );
 }
@@ -1000,9 +1089,13 @@ function ScheduleMatchRow({
         </div>
       </div>
       <div className="flex justify-start md:justify-end">
-        <span className="rounded-md bg-white/[0.06] px-2 py-1 text-xs text-zinc-400">
+        <Chip
+          className="bg-white/[0.06] text-zinc-400"
+          size="sm"
+          variant="soft"
+        >
           {getStatusLabel(match.status)}
-        </span>
+        </Chip>
       </div>
     </div>
   );
@@ -1027,13 +1120,17 @@ function RecentBet({ bet }: { bet: BetRecord }) {
       <div className="text-sm tabular-nums text-zinc-300">
         {formatCurrency(bet.stake)}
       </div>
-      <div
-        className={`text-sm font-semibold tabular-nums ${
-          bet.status === "settled" ? getProfitClass(profit) : "text-zinc-500"
-        }`}
-      >
-        {bet.status === "settled" ? formatSignedCurrency(profit) : "待结算"}
-      </div>
+      {bet.status === "settled" ? (
+        <div
+          className={`text-sm font-semibold tabular-nums ${getProfitClass(profit)}`}
+        >
+          {formatSignedCurrency(profit)}
+        </div>
+      ) : (
+        <Chip className="w-fit text-zinc-500" size="sm" variant="soft">
+          待结算
+        </Chip>
+      )}
     </div>
   );
 }

@@ -52,7 +52,7 @@ function normalizeRowCount(
   rowCount: number | null | undefined,
   rowsLength: number,
 ) {
-  return rowCount ?? rowsLength;
+  return rowsLength > 0 ? rowsLength : (rowCount ?? 0);
 }
 
 async function queryPglite<T extends QueryResultRow>(

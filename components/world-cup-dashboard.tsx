@@ -1488,37 +1488,60 @@ function SelectField({
   name: string;
   options: { label: string; value: string }[];
 }) {
+  const [selectedValue, setSelectedValue] = useState("");
+
+  useEffect(() => {
+    if (
+      selectedValue &&
+      !options.some((option) => option.value === selectedValue)
+    ) {
+      setSelectedValue("");
+    }
+  }, [options, selectedValue]);
+
   return (
-    <Select
-      fullWidth
-      isRequired
-      className="min-w-0"
-      isDisabled={disabled}
-      name={name}
-      placeholder="请选择"
-      variant="secondary"
-    >
-      <Label>{label}</Label>
-      <Select.Trigger>
-        <Select.Value />
-        <Select.Indicator />
-      </Select.Trigger>
-      <Select.Popover className="max-h-80">
-        <ListBox>
-          {options.map((option) => (
-            <ListBox.Item
-              key={option.value}
-              id={option.value}
-              textValue={option.label}
-            >
-              {option.label}
-              <ListBox.ItemIndicator />
-            </ListBox.Item>
-          ))}
-        </ListBox>
-      </Select.Popover>
-      <FieldError />
-    </Select>
+    <>
+      <input name={name} type="hidden" value={selectedValue} />
+      <Select
+        fullWidth
+        isRequired
+        className="min-w-0"
+        isDisabled={disabled}
+        placeholder="请选择"
+        selectedKey={selectedValue || null}
+        variant="secondary"
+        onSelectionChange={(key) => {
+          const selectedKey = key ? String(key) : "";
+          const selectedOption = options.find(
+            (option) =>
+              option.value === selectedKey || option.label === selectedKey,
+          );
+
+          setSelectedValue(selectedOption?.value ?? selectedKey);
+        }}
+      >
+        <Label>{label}</Label>
+        <Select.Trigger>
+          <Select.Value />
+          <Select.Indicator />
+        </Select.Trigger>
+        <Select.Popover className="max-h-80">
+          <ListBox>
+            {options.map((option) => (
+              <ListBox.Item
+                key={option.value}
+                id={option.value}
+                textValue={option.label}
+              >
+                {option.label}
+                <ListBox.ItemIndicator />
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+        <FieldError />
+      </Select>
+    </>
   );
 }
 

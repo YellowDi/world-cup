@@ -44,9 +44,6 @@ export default function RootLayout({
             <main className="mx-auto w-full max-w-7xl flex-grow px-6">
               {children}
             </main>
-            <footer className="flex w-full items-center justify-center border-t border-border py-4 text-xs text-muted">
-              World Cup Pool 2026
-            </footer>
           </div>
         </Providers>
       </body>

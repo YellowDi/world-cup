@@ -357,7 +357,7 @@ export function WorldCupDashboard() {
   }
 
   return (
-    <div className="relative isolate min-h-full pb-14 pt-8 text-foreground">
+    <div className="relative isolate min-h-full pb-14 pt-4 text-foreground">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-0 -z-10 h-full min-h-dvh w-screen -translate-x-1/2 bg-top bg-no-repeat opacity-25"
@@ -368,25 +368,6 @@ export function WorldCupDashboard() {
             "linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%)",
         }}
       />
-      <section className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div className="min-w-0">
-          <p className="mb-2 text-xs font-semibold uppercase text-muted">
-            World Cup 2026 Pool
-          </p>
-          <h1 className="text-balance text-3xl font-semibold text-foreground md:text-4xl">
-            世界杯体彩收益榜
-          </h1>
-          <p className="mt-2 max-w-2xl text-pretty text-sm leading-6 text-muted md:text-base">
-            用 Liveline 查看同事累计盈亏走势，并集中维护赛历、下注和结算记录。
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Chip variant="secondary">{snapshot.rows.length} 人参赛</Chip>
-          <Chip variant="secondary">{snapshot.pendingBets.length} 待结算</Chip>
-          <Chip variant="secondary">{snapshot.matches.length} 场比赛</Chip>
-        </div>
-      </section>
-
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
           <Surface
@@ -712,106 +693,100 @@ function SidebarMaintenanceActions({
 }) {
   return (
     <Surface className={glassSurfaceClass} variant="transparent">
-      <div className="p-4 pb-3">
-        <h2 className="text-lg font-semibold text-foreground">基础维护</h2>
-        <p className="mt-1 text-sm text-muted">同事名单和赛历同步</p>
-      </div>
-      <div className="grid gap-3 px-4 pb-4">
-        <div className="rounded-md border border-border bg-surface-secondary p-3 text-sm">
-          <div className="flex items-center justify-between gap-3">
-            <span className="truncate">{snapshot.schedule.sourceName}</span>
-            <Chip className="shrink-0" size="sm" variant="soft">
-              {snapshot.matches.length} 场
-            </Chip>
-          </div>
-          <div className="mt-2 text-xs leading-5 text-muted">
-            {snapshot.schedule.lastSyncedAt
-              ? `${dateTimeFormatter.format(new Date(snapshot.schedule.lastSyncedAt))} 同步`
-              : "尚未同步"}
-            {snapshot.schedule.usedCache ? " · 使用本地缓存" : ""}
-            {" · "}
-            {timeZoneLabel}
-          </div>
-        </div>
+      <div className="grid gap-2 p-4">
+        <MaintenanceModal
+          buttonLabel="同事名单"
+          description="新增同事、编辑姓名和启用状态"
+          isDisabled={isLoading}
+          status={
+            <StatusMessage
+              actionError={actionError}
+              isLoading={isLoading}
+              loadError={loadError}
+              notice={notice}
+            />
+          }
+          title="同事名单"
+        >
+          <Form className="grid gap-3" onSubmit={onCreateBettor}>
+            <div className="grid gap-3">
+              <Field required label="姓名" name="name" />
+            </div>
+            <SubmitButton disabled={isSubmitting}>新增同事</SubmitButton>
+          </Form>
 
-        <div className="grid grid-cols-2 gap-2">
-          <MaintenanceModal
-            buttonLabel="同事名单"
-            description="新增同事、编辑姓名和启用状态"
-            isDisabled={isLoading}
-            status={
-              <StatusMessage
-                actionError={actionError}
-                isLoading={isLoading}
-                loadError={loadError}
-                notice={notice}
-              />
-            }
-            title="同事名单"
-          >
-            <Form className="grid gap-3" onSubmit={onCreateBettor}>
-              <div className="grid gap-3">
-                <Field required label="姓名" name="name" />
-              </div>
-              <SubmitButton disabled={isSubmitting}>新增同事</SubmitButton>
-            </Form>
+          <div className="mt-4 grid gap-2">
+            {snapshot.bettors.length === 0 ? (
+              <EmptyState text="暂无同事，先新增一位参与者。" />
+            ) : (
+              snapshot.bettors.map((bettor) => (
+                <BettorEditForm
+                  key={bettor.id}
+                  bettor={bettor}
+                  disabled={isSubmitting}
+                  onSubmit={onUpdateBettor}
+                />
+              ))
+            )}
+          </div>
+        </MaintenanceModal>
 
-            <div className="mt-4 grid gap-2">
-              {snapshot.bettors.length === 0 ? (
-                <EmptyState text="暂无同事，先新增一位参与者。" />
-              ) : (
-                snapshot.bettors.map((bettor) => (
-                  <BettorEditForm
-                    key={bettor.id}
-                    bettor={bettor}
-                    disabled={isSubmitting}
-                    onSubmit={onUpdateBettor}
+        <MaintenanceModal
+          buttonLabel="赛历同步"
+          description="同步比赛赛历并查看近期可下注比赛"
+          isDisabled={isLoading}
+          status={
+            <StatusMessage
+              actionError={actionError}
+              isLoading={isLoading}
+              loadError={loadError}
+              notice={notice}
+            />
+          }
+          title="赛历同步"
+        >
+          <div className="rounded-md border border-border bg-surface-secondary p-3 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="truncate">{snapshot.schedule.sourceName}</span>
+              <Chip className="shrink-0" size="sm" variant="soft">
+                {snapshot.matches.length} 场
+              </Chip>
+            </div>
+            <div className="mt-2 text-xs leading-5 text-muted">
+              {snapshot.schedule.lastSyncedAt
+                ? `${dateTimeFormatter.format(new Date(snapshot.schedule.lastSyncedAt))} 同步`
+                : "尚未同步"}
+              {snapshot.schedule.usedCache ? " · 使用本地缓存" : ""}
+              {" · "}
+              {timeZoneLabel}
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3">
+            <ActionButton
+              disabled={isSubmitting}
+              onPress={() => void onSyncMatches()}
+            >
+              同步赛历
+            </ActionButton>
+          </div>
+
+          <div className="mt-4 max-h-60 overflow-y-auto rounded-md border border-border">
+            {upcomingMatches.length === 0 ? (
+              <EmptyState text="暂无未来赛程，同步赛历后可提交下注。" />
+            ) : (
+              upcomingMatches
+                .slice(0, 8)
+                .map((match) => (
+                  <MatchRow
+                    key={match.id}
+                    dateTimeFormatter={dateTimeFormatter}
+                    match={match}
                   />
                 ))
-              )}
-            </div>
-          </MaintenanceModal>
-
-          <MaintenanceModal
-            buttonLabel="赛历同步"
-            description="同步比赛赛历并查看近期可下注比赛"
-            isDisabled={isLoading}
-            status={
-              <StatusMessage
-                actionError={actionError}
-                isLoading={isLoading}
-                loadError={loadError}
-                notice={notice}
-              />
-            }
-            title="赛历同步"
-          >
-            <div className="grid gap-3">
-              <ActionButton
-                disabled={isSubmitting}
-                onPress={() => void onSyncMatches()}
-              >
-                同步赛历
-              </ActionButton>
-            </div>
-
-            <div className="mt-4 max-h-60 overflow-y-auto rounded-md border border-border">
-              {upcomingMatches.length === 0 ? (
-                <EmptyState text="暂无未来赛程，同步赛历后可提交下注。" />
-              ) : (
-                upcomingMatches
-                  .slice(0, 8)
-                  .map((match) => (
-                    <MatchRow
-                      key={match.id}
-                      dateTimeFormatter={dateTimeFormatter}
-                      match={match}
-                    />
-                  ))
-              )}
-            </div>
-          </MaintenanceModal>
-        </div>
+            )}
+          </div>
+        </MaintenanceModal>
       </div>
     </Surface>
   );
@@ -852,91 +827,70 @@ function DashboardSidebar({
 }) {
   return (
     <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-2rem)] lg:max-h-[calc(100dvh-2rem)]">
-      <Surface
-        className={`${glassSurfaceClass} shrink-0`}
-        id="data-admin"
-        variant="transparent"
-      >
-        <div className="p-4 pb-3">
-          <h2 className="text-lg font-semibold text-foreground">快速操作</h2>
-          <p className="mt-1 text-sm text-muted">提交新的比赛下注记录</p>
-        </div>
-        <div className="grid gap-3 px-4 pb-4">
-          <StatusMessage
-            actionError={actionError}
-            isLoading={isLoading}
-            loadError={loadError}
-            notice={notice}
-          />
-
-          <div className="grid gap-2">
-            <MaintenanceModal
-              buttonLabel="提交下注"
-              buttonVariant="primary"
-              description="选择同事、比赛、玩法和下注额"
-              isDisabled={isLoading}
-              status={
-                <StatusMessage
-                  actionError={actionError}
-                  isLoading={isLoading}
-                  loadError={loadError}
-                  notice={notice}
-                />
+      <div className="shrink-0" id="data-admin">
+        <MaintenanceModal
+          buttonLabel="提交下注"
+          buttonVariant="primary"
+          description="选择同事、比赛、玩法和下注额"
+          isDisabled={isLoading}
+          status={
+            <StatusMessage
+              actionError={actionError}
+              isLoading={isLoading}
+              loadError={loadError}
+              notice={notice}
+            />
+          }
+          title="提交下注"
+        >
+          <Form className="grid gap-3" onSubmit={onCreateBet}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SelectField
+                disabled={isSubmitting || snapshot.activeBettors.length === 0}
+                label="同事"
+                name="bettorId"
+                options={snapshot.activeBettors.map((bettor) => ({
+                  label: bettor.name,
+                  value: bettor.id,
+                }))}
+              />
+              <SelectField
+                disabled={isSubmitting || snapshot.matches.length === 0}
+                label="比赛"
+                name="matchId"
+                options={snapshot.matches.map((match) => ({
+                  label: formatMatchOption(match, dateTimeFormatter),
+                  value: match.id,
+                }))}
+              />
+              <Field
+                required
+                defaultValue="胜平负"
+                label="玩法"
+                name="market"
+              />
+              <Field required label="选择" name="pick" />
+              <Field
+                required
+                label="下注额"
+                min="0.01"
+                name="stake"
+                step="0.01"
+                type="number"
+              />
+            </div>
+            <SubmitButton
+              disabled={
+                isSubmitting ||
+                snapshot.activeBettors.length === 0 ||
+                snapshot.matches.length === 0
               }
-              title="提交下注"
             >
-              <Form className="grid gap-3" onSubmit={onCreateBet}>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <SelectField
-                    disabled={
-                      isSubmitting || snapshot.activeBettors.length === 0
-                    }
-                    label="同事"
-                    name="bettorId"
-                    options={snapshot.activeBettors.map((bettor) => ({
-                      label: bettor.name,
-                      value: bettor.id,
-                    }))}
-                  />
-                  <SelectField
-                    disabled={isSubmitting || snapshot.matches.length === 0}
-                    label="比赛"
-                    name="matchId"
-                    options={snapshot.matches.map((match) => ({
-                      label: formatMatchOption(match, dateTimeFormatter),
-                      value: match.id,
-                    }))}
-                  />
-                  <Field
-                    required
-                    defaultValue="胜平负"
-                    label="玩法"
-                    name="market"
-                  />
-                  <Field required label="选择" name="pick" />
-                  <Field
-                    required
-                    label="下注额"
-                    min="0.01"
-                    name="stake"
-                    step="0.01"
-                    type="number"
-                  />
-                </div>
-                <SubmitButton
-                  disabled={
-                    isSubmitting ||
-                    snapshot.activeBettors.length === 0 ||
-                    snapshot.matches.length === 0
-                  }
-                >
-                  提交下注
-                </SubmitButton>
-              </Form>
-            </MaintenanceModal>
-          </div>
-        </div>
-      </Surface>
+              提交下注
+            </SubmitButton>
+          </Form>
+        </MaintenanceModal>
+      </div>
 
       <PendingSettlementsCard
         bets={snapshot.pendingBets}
@@ -979,35 +933,50 @@ function PendingSettlementsCard({
   disabled: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
   return (
-    <Surface
+    <Disclosure
+      aria-label="待结算"
       className={`${glassSurfaceClass} min-h-0 shrink-0 lg:flex lg:max-h-80 lg:flex-col`}
-      variant="transparent"
+      isExpanded={isExpanded}
+      onExpandedChange={setIsExpanded}
     >
-      <div className="flex shrink-0 items-start justify-between gap-3 p-4 pb-3">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">待结算</h2>
-          <p className="mt-1 text-sm text-muted">结算待处理的下注记录</p>
+      <Disclosure.Heading className="flex shrink-0">
+        <Disclosure.Trigger className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-none border-0 p-4 text-left hover:no-underline">
+          <span className="min-w-0">
+            <span className="block text-lg font-semibold text-foreground">
+              待结算
+            </span>
+            <span className="mt-1 block text-sm text-muted">
+              结算待处理的下注记录
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-2">
+            <Chip size="sm" variant="soft">
+              {bets.length} 条
+            </Chip>
+            <Disclosure.Indicator className="size-4 text-muted" />
+          </span>
+        </Disclosure.Trigger>
+      </Disclosure.Heading>
+      <Disclosure.Content className="min-h-0 overflow-hidden lg:flex-1">
+        <div className="grid min-h-0 gap-2 overflow-y-auto border-t border-border px-4 pb-4 pt-3 lg:flex-1">
+          {bets.length === 0 ? (
+            <EmptyState text="暂无待结算下注。" />
+          ) : (
+            bets.map((bet) => (
+              <PendingBetForm
+                key={bet.id}
+                bet={bet}
+                disabled={disabled}
+                onSubmit={onSubmit}
+              />
+            ))
+          )}
         </div>
-        <Chip className="shrink-0" size="sm" variant="soft">
-          {bets.length} 条
-        </Chip>
-      </div>
-      <div className="grid min-h-0 gap-2 overflow-y-auto px-4 pb-4 lg:flex-1">
-        {bets.length === 0 ? (
-          <EmptyState text="暂无待结算下注。" />
-        ) : (
-          bets.map((bet) => (
-            <PendingBetForm
-              key={bet.id}
-              bet={bet}
-              disabled={disabled}
-              onSubmit={onSubmit}
-            />
-          ))
-        )}
-      </div>
-    </Surface>
+      </Disclosure.Content>
+    </Disclosure>
   );
 }
 
@@ -1020,38 +989,58 @@ function BetHistoryCard({
   groups: BettorBetGroup[];
   isLoading: boolean;
 }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
   return (
-    <Surface
-      className={`${glassSurfaceClass} min-h-0 lg:flex lg:flex-1 lg:flex-col`}
-      variant="transparent"
+    <Disclosure
+      aria-label="个人投注记录"
+      className={`${glassSurfaceClass} min-h-0 shrink-0`}
+      isExpanded={isExpanded}
+      onExpandedChange={setIsExpanded}
     >
-      <div className="shrink-0 p-4 pb-3">
-        <h2 className="text-lg font-semibold text-foreground">个人投注记录</h2>
-        <p className="mt-1 text-sm text-muted">按同事折叠展示完整下注记录</p>
-      </div>
-      <div className="min-h-0 px-4 pb-4 lg:flex-1 lg:overflow-y-auto">
-        {groups.length === 0 ? (
-          <EmptyState
-            text={isLoading ? "下注记录加载中。" : "暂无下注记录。"}
-          />
-        ) : (
-          <DisclosureGroup
-            allowsMultipleExpanded
-            aria-label="个人投注记录"
-            className="grid gap-2"
-            defaultExpandedKeys={[groups[0].id]}
-          >
-            {groups.map((group) => (
-              <BetGroupDisclosure
-                key={group.id}
-                dateTimeFormatter={dateTimeFormatter}
-                group={group}
-              />
-            ))}
-          </DisclosureGroup>
-        )}
-      </div>
-    </Surface>
+      <Disclosure.Heading className="flex shrink-0">
+        <Disclosure.Trigger className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-none border-0 p-4 text-left hover:no-underline">
+          <span className="min-w-0">
+            <span className="block text-lg font-semibold text-foreground">
+              个人投注记录
+            </span>
+            <span className="mt-1 block text-sm text-muted">
+              按同事折叠展示完整下注记录
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-2">
+            <Chip size="sm" variant="soft">
+              {groups.length} 人
+            </Chip>
+            <Disclosure.Indicator className="size-4 text-muted" />
+          </span>
+        </Disclosure.Trigger>
+      </Disclosure.Heading>
+      <Disclosure.Content className="overflow-hidden">
+        <div className="max-h-96 overflow-y-auto border-t border-border px-4 pb-4 pt-3">
+          {groups.length === 0 ? (
+            <EmptyState
+              text={isLoading ? "下注记录加载中。" : "暂无下注记录。"}
+            />
+          ) : (
+            <DisclosureGroup
+              allowsMultipleExpanded
+              aria-label="个人投注记录"
+              className="grid gap-2"
+              defaultExpandedKeys={[groups[0].id]}
+            >
+              {groups.map((group) => (
+                <BetGroupDisclosure
+                  key={group.id}
+                  dateTimeFormatter={dateTimeFormatter}
+                  group={group}
+                />
+              ))}
+            </DisclosureGroup>
+          )}
+        </div>
+      </Disclosure.Content>
+    </Disclosure>
   );
 }
 
@@ -1247,6 +1236,7 @@ function Field({
       isRequired={required}
       name={name}
       type={type}
+      variant="secondary"
     >
       <Label>{label}</Label>
       <Input min={min} step={step} />
@@ -1274,6 +1264,7 @@ function SelectField({
       isDisabled={disabled}
       name={name}
       placeholder="请选择"
+      variant="secondary"
     >
       <Label>{label}</Label>
       <Select.Trigger>

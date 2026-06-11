@@ -355,7 +355,17 @@ export function WorldCupDashboard() {
   }
 
   return (
-    <div className="min-h-full pb-14 pt-8 text-foreground">
+    <div className="relative isolate min-h-full pb-14 pt-8 text-foreground">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-0 -z-10 h-full min-h-dvh w-screen -translate-x-1/2 bg-top bg-no-repeat opacity-25"
+        style={{
+          backgroundImage: "url('/hero.png')",
+          backgroundSize: "100% auto",
+          maskImage:
+            "linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%)",
+        }}
+      />
       <section className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div className="min-w-0">
           <p className="mb-2 text-xs font-semibold uppercase text-muted">
@@ -478,25 +488,23 @@ function DashboardTabs({
 }) {
   return (
     <Card>
-      <Tabs
-        className="flex min-h-[420px] flex-col"
-        defaultSelectedKey="schedule"
-        variant="secondary"
-      >
+      <Tabs className="flex min-h-[420px] flex-col" defaultSelectedKey="profit">
         <Tabs.ListContainer className="px-4 pt-4">
           <Tabs.List aria-label="看板数据视图">
+            <Tabs.Tab id="profit">
+              <Tabs.Indicator />
+              收益表格
+            </Tabs.Tab>
             <Tabs.Tab id="schedule">
               <Tabs.Indicator />
               未来赛历
             </Tabs.Tab>
-            <Tabs.Tab id="profit">
-              <Tabs.Separator />
-              <Tabs.Indicator />
-              收益表格
-            </Tabs.Tab>
           </Tabs.List>
         </Tabs.ListContainer>
 
+        <Tabs.Panel className="min-h-0 flex-1 p-0" id="profit">
+          <ProfitTable rows={rows} />
+        </Tabs.Panel>
         <Tabs.Panel className="min-h-0 flex-1 p-0" id="schedule">
           <SchedulePanel
             dateTimeFormatter={dateTimeFormatter}
@@ -505,9 +513,6 @@ function DashboardTabs({
             totalMatches={totalMatches}
             upcomingMatches={upcomingMatches}
           />
-        </Tabs.Panel>
-        <Tabs.Panel className="min-h-0 flex-1 p-0" id="profit">
-          <ProfitTable rows={rows} />
         </Tabs.Panel>
       </Tabs>
     </Card>

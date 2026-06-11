@@ -524,47 +524,62 @@ function ProfitTable({ rows }: { rows: DashboardSnapshot["rows"] }) {
         </Chip>
       </div>
 
-      <div className="border-t border-border">
-        <Table variant="secondary">
-          <Table.ScrollContainer className="overflow-x-auto">
-            <Table.Content
-              aria-label="个人收益详情"
-              className="min-w-[1040px] text-sm"
+      <Table variant="secondary">
+        <Table.ScrollContainer className="overflow-x-auto">
+          <Table.Content
+            aria-label="个人收益详情"
+            className="min-w-[680px] table-fixed text-sm"
+          >
+            <Table.Header>
+              <Table.Column className="w-10 px-1.5">排名</Table.Column>
+              <Table.Column isRowHeader className="w-20 px-1.5">
+                同事
+              </Table.Column>
+              <Table.Column className="w-[4.5rem] px-1.5 text-right">
+                累计收益
+              </Table.Column>
+              <Table.Column className="w-11 px-1.5 text-right">
+                ROI
+              </Table.Column>
+              <Table.Column className="w-16 px-1.5 text-right">
+                下注额
+              </Table.Column>
+              <Table.Column className="w-16 px-1.5 text-right">
+                返奖
+              </Table.Column>
+              <Table.Column className="w-12 px-1.5 text-right">
+                命中率
+              </Table.Column>
+              <Table.Column className="w-16 px-1.5">优势玩法</Table.Column>
+              <Table.Column className="px-1.5">最新选择</Table.Column>
+            </Table.Header>
+            <Table.Body
+              renderEmptyState={() => (
+                <div className="px-3 py-10 text-center text-muted">
+                  暂无收益数据，新增同事并提交下注后会显示排名。
+                </div>
+              )}
             >
-              <Table.Header>
-                <Table.Column>排名</Table.Column>
-                <Table.Column isRowHeader>同事</Table.Column>
-                <Table.Column className="text-right">累计收益</Table.Column>
-                <Table.Column className="text-right">ROI</Table.Column>
-                <Table.Column className="text-right">下注额</Table.Column>
-                <Table.Column className="text-right">返奖</Table.Column>
-                <Table.Column className="text-right">命中率</Table.Column>
-                <Table.Column>优势玩法</Table.Column>
-                <Table.Column>最新选择</Table.Column>
-              </Table.Header>
-              <Table.Body
-                renderEmptyState={() => (
-                  <div className="px-3 py-10 text-center text-muted">
-                    暂无收益数据，新增同事并提交下注后会显示排名。
-                  </div>
-                )}
-              >
-                {rows.map((row) => (
+              {rows.map((row, rowIndex) => {
+                const lastRowBorderClass =
+                  rowIndex === rows.length - 1 ? "!border-b-0" : "";
+
+                return (
                   <Table.Row key={row.id} id={row.id}>
-                    <Table.Cell>
-                      <span className="inline-flex size-7 items-center justify-center rounded-md bg-default font-semibold">
+                    <Table.Cell className={`px-1.5 ${lastRowBorderClass}`}>
+                      <span className="inline-flex size-6 items-center justify-center rounded-md bg-default font-semibold">
                         {row.rank}
                       </span>
                     </Table.Cell>
-                    <Table.Cell>
-                      <div className="flex items-center gap-3">
+                    <Table.Cell className={`px-1.5 ${lastRowBorderClass}`}>
+                      <div className="flex min-w-0 items-center gap-2">
                         <span
                           aria-hidden="true"
                           className="size-3 rounded-full"
                           style={{ backgroundColor: row.color }}
                         />
-                        <div>
-                          <div className="font-medium">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">
                             {row.name}
                             {!row.isActive ? (
                               <Chip
@@ -581,36 +596,46 @@ function ProfitTable({ rows }: { rows: DashboardSnapshot["rows"] }) {
                       </div>
                     </Table.Cell>
                     <Table.Cell
-                      className={`text-right font-semibold tabular-nums ${getProfitClass(row.profit)}`}
+                      className={`px-1.5 text-right font-semibold tabular-nums ${getProfitClass(row.profit)} ${lastRowBorderClass}`}
                     >
                       {formatSignedCurrency(row.profit)}
                     </Table.Cell>
-                    <Table.Cell className="text-right tabular-nums">
+                    <Table.Cell
+                      className={`px-1.5 text-right tabular-nums ${lastRowBorderClass}`}
+                    >
                       {percentFormatter.format(row.roi)}
                     </Table.Cell>
-                    <Table.Cell className="text-right tabular-nums">
+                    <Table.Cell
+                      className={`px-1.5 text-right tabular-nums ${lastRowBorderClass}`}
+                    >
                       {formatCurrency(row.stake)}
                     </Table.Cell>
-                    <Table.Cell className="text-right tabular-nums">
+                    <Table.Cell
+                      className={`px-1.5 text-right tabular-nums ${lastRowBorderClass}`}
+                    >
                       {formatCurrency(row.payout)}
                     </Table.Cell>
-                    <Table.Cell className="text-right tabular-nums">
+                    <Table.Cell
+                      className={`px-1.5 text-right tabular-nums ${lastRowBorderClass}`}
+                    >
                       {row.wins}/{row.settled}
                     </Table.Cell>
-                    <Table.Cell>{row.bestMarket}</Table.Cell>
-                    <Table.Cell>
+                    <Table.Cell className={`px-1.5 ${lastRowBorderClass}`}>
+                      <span className="block truncate">{row.bestMarket}</span>
+                    </Table.Cell>
+                    <Table.Cell className={`px-1.5 ${lastRowBorderClass}`}>
                       <Chip className="mr-2" size="sm" variant="soft">
                         {row.pending} 待
                       </Chip>
-                      {row.latestPick}
+                      <span className="align-middle">{row.latestPick}</span>
                     </Table.Cell>
                   </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
-        </Table>
-      </div>
+                );
+              })}
+            </Table.Body>
+          </Table.Content>
+        </Table.ScrollContainer>
+      </Table>
     </section>
   );
 }
@@ -849,10 +874,12 @@ function DashboardSidebar({
 
   return (
     <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-2rem)] lg:max-h-[calc(100dvh-2rem)]">
-      <Surface
-        className={`${glassSurfaceClass} shrink-0 p-3`}
-        id="data-admin"
-        variant="transparent"
+      <ScheduleCard
+        dateTimeFormatter={dateTimeFormatter}
+        schedule={snapshot.schedule}
+        timeZoneLabel={timeZoneLabel}
+        totalMatches={snapshot.matches.length}
+        upcomingMatches={upcomingMatches}
       >
         <MaintenanceModal
           buttonLabel="提交下注"
@@ -990,15 +1017,7 @@ function DashboardSidebar({
             <SubmitButton disabled={isBetSubmitDisabled}>提交下注</SubmitButton>
           </Form>
         </MaintenanceModal>
-      </Surface>
-
-      <ScheduleCard
-        dateTimeFormatter={dateTimeFormatter}
-        schedule={snapshot.schedule}
-        timeZoneLabel={timeZoneLabel}
-        totalMatches={snapshot.matches.length}
-        upcomingMatches={upcomingMatches}
-      />
+      </ScheduleCard>
 
       <PendingSettlementsCard
         bets={snapshot.pendingBets}
@@ -1033,12 +1052,14 @@ function DashboardSidebar({
 }
 
 function ScheduleCard({
+  children,
   dateTimeFormatter,
   schedule,
   timeZoneLabel,
   totalMatches,
   upcomingMatches,
 }: {
+  children?: ReactNode;
   dateTimeFormatter: Intl.DateTimeFormat;
   schedule: DashboardSnapshot["schedule"];
   timeZoneLabel: string;
@@ -1050,7 +1071,8 @@ function ScheduleCard({
   return (
     <Disclosure
       aria-label="未来赛历"
-      className={`${glassSurfaceClass} min-h-0 shrink-0 lg:flex lg:max-h-72 lg:flex-col`}
+      className={`${glassSurfaceClass} min-h-0 shrink-0 lg:flex lg:flex-col`}
+      id="data-admin"
       isExpanded={isExpanded}
       onExpandedChange={setIsExpanded}
     >
@@ -1089,7 +1111,7 @@ function ScheduleCard({
           {upcomingMatches.length === 0 ? (
             <EmptyState text="未来 7 天暂无赛程。" />
           ) : (
-            <ScrollShadow className="max-h-64" size={32}>
+            <ScrollShadow className="max-h-60" size={32}>
               <div className="overflow-hidden rounded-md border border-border">
                 {upcomingMatches.map((match) => (
                   <MatchRow
@@ -1101,6 +1123,10 @@ function ScheduleCard({
               </div>
             </ScrollShadow>
           )}
+
+          {children ? (
+            <div className="border-t border-border pt-3">{children}</div>
+          ) : null}
         </div>
       </Disclosure.Content>
     </Disclosure>

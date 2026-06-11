@@ -1,7 +1,6 @@
 import { FC, useEffect, useState } from "react";
 import { Button } from "@heroui/react";
 import { useTheme } from "next-themes";
-import clsx from "clsx";
 
 import { SunFilledIcon, MoonFilledIcon } from "@/components/icons";
 
@@ -29,10 +28,7 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({ className }) => {
     <Button
       isIconOnly
       aria-label={`Switch to ${isLight ? "dark" : "light"} mode`}
-      className={clsx(
-        "h-auto w-auto min-w-0 bg-transparent px-px text-muted hover:bg-transparent hover:opacity-80",
-        className,
-      )}
+      className={className}
       variant="ghost"
       onPress={handleToggle}
     >

@@ -20,8 +20,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#07090c" },
-    { media: "(prefers-color-scheme: dark)", color: "#07090c" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f7f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#18181b" },
   ],
 };
 
@@ -35,7 +35,7 @@ export default function RootLayout({
       <head />
       <body
         className={clsx(
-          "min-h-screen overflow-x-hidden bg-[#07090c] text-foreground font-sans antialiased",
+          "min-h-screen overflow-x-hidden bg-background text-foreground font-sans antialiased",
           fontSans.variable,
         )}
       >
@@ -44,7 +44,7 @@ export default function RootLayout({
             <main className="mx-auto w-full max-w-7xl flex-grow px-6">
               {children}
             </main>
-            <footer className="flex w-full items-center justify-center border-t border-white/10 py-4 text-xs text-zinc-500">
+            <footer className="flex w-full items-center justify-center border-t border-border py-4 text-xs text-muted">
               World Cup Pool 2026
             </footer>
           </div>

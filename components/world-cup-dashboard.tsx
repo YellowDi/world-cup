@@ -15,6 +15,7 @@ import {
   Button,
   Checkbox,
   Chip,
+  ComboBox,
   Disclosure,
   DisclosureGroup,
   FieldError,
@@ -165,6 +166,23 @@ function formatBetMeta(bet: BetRecord, dateTimeFormatter: Intl.DateTimeFormat) {
   return bet.match
     ? `${dateTimeFormatter.format(new Date(bet.match.kickoffAt))} · ${betLabel}`
     : betLabel;
+}
+
+function isChampionCountryName(teamName: string) {
+  const name = teamName.trim();
+
+  if (!name) {
+    return false;
+  }
+
+  return ![
+    /^第\d+(?:场|轮)[胜负]者$/,
+    /^[A-L](?:\/[A-L])*组第[123]$/,
+    /^TBD$/i,
+    /^待定$/,
+    /winner|loser|match|round|group|play-?off/i,
+    /胜者|负者|待定|组第/,
+  ].some((pattern) => pattern.test(name));
 }
 
 function getStatusLabel(status: Match["status"]) {
@@ -885,7 +903,7 @@ function DashboardSidebar({
     const addCountry = (country: string) => {
       const normalizedCountry = country.trim();
 
-      if (normalizedCountry) {
+      if (isChampionCountryName(normalizedCountry)) {
         countries.add(normalizedCountry);
       }
     };
@@ -1049,7 +1067,7 @@ function DashboardSidebar({
                       bettors={snapshot.activeBettors}
                       isSubmitting={isSubmitting}
                     />
-                    <MultiSelectField
+                    <ChampionComboBoxField
                       disabled={
                         isSubmitting || championCountryOptions.length === 0
                       }
@@ -1504,7 +1522,7 @@ function SelectField({
   );
 }
 
-function MultiSelectField({
+function ChampionComboBoxField({
   disabled,
   label,
   name,
@@ -1519,46 +1537,102 @@ function MultiSelectField({
   selectedValues: Set<string>;
   onChange: (selectedValues: Set<string>) => void;
 }) {
+  const [inputValue, setInputValue] = useState("");
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const availableOptions = options.filter(
+    (option) => !selectedValues.has(option.value),
+  );
+
+  useEffect(() => {
+    if (selectedValues.size === 0) {
+      setInputValue("");
+      setSelectedKey(null);
+    }
+  }, [selectedValues.size]);
+
+  function addChampion(value: string) {
+    onChange(new Set([...Array.from(selectedValues), value]));
+    setInputValue("");
+    setSelectedKey(null);
+  }
+
+  function removeChampion(value: string) {
+    const nextValues = new Set(selectedValues);
+
+    nextValues.delete(value);
+    onChange(nextValues);
+  }
+
   return (
     <div className="grid gap-1.5">
       {Array.from(selectedValues).map((value) => (
         <input key={value} name={name} type="hidden" value={value} />
       ))}
-      <Label>{label}</Label>
-      <div
-        aria-disabled={disabled || undefined}
-        className="max-h-60 overflow-y-auto rounded-md border border-border bg-surface-secondary aria-disabled:opacity-50"
+      <ComboBox
+        allowsEmptyCollection
+        fullWidth
+        className="min-w-0"
+        defaultFilter={(textValue, filterValue) =>
+          textValue.toLowerCase().includes(filterValue.toLowerCase())
+        }
+        inputValue={inputValue}
+        isDisabled={disabled}
+        items={availableOptions}
+        menuTrigger="input"
+        selectedKey={selectedKey}
+        variant="secondary"
+        onInputChange={setInputValue}
+        onSelectionChange={(key) => {
+          if (key === null) {
+            setSelectedKey(null);
+
+            return;
+          }
+
+          const value = String(key);
+
+          setSelectedKey(value);
+          addChampion(value);
+        }}
       >
-        <ListBox
-          aria-label={label}
-          className="p-1"
-          selectedKeys={selectedValues}
-          selectionMode="multiple"
-          onSelectionChange={(selection) => {
-            if (selection === "all") {
-              onChange(new Set(options.map((option) => option.value)));
-
-              return;
-            }
-
-            if (!disabled) {
-              onChange(new Set(Array.from(selection).map(String)));
-            }
-          }}
-        >
-          {options.map((option) => (
-            <ListBox.Item
-              key={option.value}
-              id={option.value}
-              isDisabled={disabled}
-              textValue={option.label}
-            >
-              {option.label}
-              <ListBox.ItemIndicator />
-            </ListBox.Item>
+        <Label>{label}</Label>
+        <ComboBox.InputGroup>
+          <Input />
+          <ComboBox.Trigger />
+        </ComboBox.InputGroup>
+        <ComboBox.Popover className="max-h-80">
+          <ListBox>
+            {availableOptions.map((option) => (
+              <ListBox.Item
+                key={option.value}
+                id={option.value}
+                textValue={option.label}
+              >
+                {option.label}
+                <ListBox.ItemIndicator />
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </ComboBox.Popover>
+        <FieldError />
+      </ComboBox>
+      {selectedValues.size > 0 ? (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {Array.from(selectedValues).map((value) => (
+            <Chip key={value} size="sm" variant="soft">
+              <span>{value}</span>
+              <button
+                aria-label={`移除${value}`}
+                className="ml-1 rounded-full px-1 text-muted hover:text-foreground"
+                type="button"
+                onClick={() => removeChampion(value)}
+              >
+                ×
+              </button>
+            </Chip>
           ))}
-        </ListBox>
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

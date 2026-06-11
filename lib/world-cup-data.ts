@@ -90,6 +90,7 @@ export type DashboardSnapshot = {
   bettors: Bettor[];
   activeBettors: Bettor[];
   matches: Match[];
+  bets: BetRecord[];
   pendingBets: BetRecord[];
   recentBets: BetRecord[];
   rows: BettorSummary[];
@@ -99,6 +100,7 @@ export type DashboardSnapshot = {
 
 export const emptyDashboardSnapshot: DashboardSnapshot = {
   activeBettors: [],
+  bets: [],
   bettors: [],
   matches: [],
   pendingBets: [],

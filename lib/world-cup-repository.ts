@@ -315,6 +315,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
 
   return {
     activeBettors: bettors.filter((bettor) => bettor.isActive),
+    bets,
     bettors,
     matches,
     pendingBets: bets.filter((bet) => bet.status === "pending"),

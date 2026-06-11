@@ -1199,7 +1199,7 @@ function PendingSettlementsCard({
             <EmptyState text="暂无待结算下注。" />
           ) : (
             bets.map((bet) => (
-              <PendingBetForm
+              <PendingBetSettlementModal
                 key={bet.id}
                 bet={bet}
                 disabled={disabled}
@@ -1725,7 +1725,7 @@ function BettorEditForm({
   );
 }
 
-function PendingBetForm({
+function PendingBetSettlementModal({
   bet,
   disabled,
   onSubmit,
@@ -1735,37 +1735,72 @@ function PendingBetForm({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <Form
-      className="grid gap-2 rounded-md border border-border bg-surface-secondary p-3"
-      onSubmit={onSubmit}
-    >
-      <input name="id" type="hidden" value={bet.id} />
-      <div className="min-w-0">
-        <div className="truncate text-sm font-medium">
-          {bet.bettorName} · {formatBetContext(bet)}
+    <div className="grid gap-3 rounded-md border border-border bg-surface-secondary p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium">
+            {bet.bettorName} · {formatBetContext(bet)}
+          </div>
+          <div className="mt-1 truncate text-xs text-muted">
+            {bet.market}：{bet.pick} · {formatCurrency(bet.stake)}
+          </div>
         </div>
-        <div className="mt-1 truncate text-xs text-muted">
-          {bet.market}：{bet.pick} · {formatCurrency(bet.stake)}
-        </div>
+        <Modal>
+          <Button
+            className="shrink-0"
+            isDisabled={disabled}
+            variant="secondary"
+          >
+            结算
+          </Button>
+          <Modal.Backdrop variant="blur">
+            <Modal.Container placement="center" scroll="inside" size="md">
+              <Modal.Dialog>
+                <Modal.CloseTrigger />
+                <Modal.Header>
+                  <div>
+                    <Modal.Heading>结算下注</Modal.Heading>
+                    <p className="mt-1 text-sm text-muted">
+                      {bet.bettorName} · {formatBetContext(bet)}
+                    </p>
+                  </div>
+                </Modal.Header>
+                <Modal.Body>
+                  <Form className="grid gap-3" onSubmit={onSubmit}>
+                    <input name="id" type="hidden" value={bet.id} />
+                    <div className="rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm">
+                      <div className="truncate font-medium">
+                        {bet.market}：{bet.pick}
+                      </div>
+                      <div className="mt-1 text-xs text-muted">
+                        下注 {formatCurrency(bet.stake)}
+                      </div>
+                    </div>
+                    <SelectField
+                      label="结果"
+                      name="isWin"
+                      options={[
+                        { label: "命中", value: "true" },
+                        { label: "未中", value: "false" },
+                      ]}
+                    />
+                    <Field
+                      required
+                      label="返奖"
+                      min="0"
+                      name="payout"
+                      step="0.01"
+                      type="number"
+                    />
+                    <SubmitButton disabled={disabled}>确认结算</SubmitButton>
+                  </Form>
+                </Modal.Body>
+              </Modal.Dialog>
+            </Modal.Container>
+          </Modal.Backdrop>
+        </Modal>
       </div>
-      <Field
-        required
-        label="返奖"
-        min="0"
-        name="payout"
-        step="0.01"
-        type="number"
-      />
-      <SelectField
-        label="结果"
-        name="isWin"
-        options={[
-          { label: "命中", value: "true" },
-          { label: "未中", value: "false" },
-        ]}
-      />
-      <SubmitButton disabled={disabled}>结算</SubmitButton>
-    </Form>
+    </div>
   );
 }
 

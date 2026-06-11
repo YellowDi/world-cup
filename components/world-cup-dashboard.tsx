@@ -57,41 +57,111 @@ export function WorldCupDashboard() {
   const series = useMemo(() => buildProfitSeries(nowSeconds), [nowSeconds]);
   const rows = useMemo(() => getBettorSummaries(), []);
   const stats = useMemo(() => getPoolStats(), []);
+  const leaderRows = rows.slice(0, 3);
 
   return (
     <div className="min-h-full pb-14 text-zinc-100">
-      <section className="pt-6 md:pt-8">
+      <section className="relative left-1/2 w-screen -translate-x-1/2 overflow-hidden">
         <div
-          aria-label="企丰科技项目头图"
-          className="w-full rounded-lg border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.38)]"
-          role="img"
+          aria-hidden="true"
+          className="absolute inset-0"
           style={{
-            aspectRatio: "1672 / 941",
             backgroundColor: "#07090c",
-            backgroundImage:
-              "linear-gradient(to bottom, rgba(7, 9, 12, 0) 68%, rgba(7, 9, 12, 0.74) 88%, #07090c 100%), url('/hero.png')",
-            backgroundPosition: "center",
+            backgroundImage: "url('/hero.png')",
+            backgroundPosition: "center top",
             backgroundRepeat: "no-repeat",
             backgroundSize: "cover",
           }}
         />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,9,12,0.08)_0%,rgba(7,9,12,0.18)_45%,rgba(7,9,12,0.72)_78%,#07090c_100%)]"
+        />
+        <div className="relative mx-auto flex min-h-[520px] max-w-7xl items-end px-6 pb-16 pt-28 md:min-h-[620px] lg:min-h-[680px]">
+          <div className="grid w-full gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-end">
+            <div className="max-w-3xl">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.28em] text-sky-200">
+                World Cup 2026 Pool
+              </p>
+              <h1 className="text-3xl font-semibold tracking-normal text-white [text-shadow:0_3px_24px_rgba(0,0,0,0.62)] md:text-5xl">
+                世界杯体彩收益榜
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-200 [text-shadow:0_2px_18px_rgba(0,0,0,0.72)] md:text-base md:leading-7">
+                公司同事投注收益实时对比，按累计净收益跟踪排名、ROI、返奖和待结算情况。
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 overflow-hidden rounded-lg border border-white/15 bg-[#07090c]/58 shadow-[0_18px_60px_rgba(0,0,0,0.32)] backdrop-blur-md">
+              <SummaryStat label="参与同事" value={`${rows.length} 人`} />
+              <SummaryStat label="已结算" value={`${stats.settledBets} 单`} />
+              <SummaryStat label="待结算" value={`${stats.pendingBets} 单`} />
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:py-10">
-        <div className="flex min-w-0 flex-col justify-end">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.32em] text-amber-300">
-            FIFA World Cup 2026
-          </p>
-          <h1 className="max-w-4xl text-4xl font-semibold tracking-normal text-white md:text-6xl">
-            世界杯体彩收益榜
-          </h1>
-          <p className="mt-5 max-w-3xl text-base leading-7 text-zinc-300">
-            公司同事投注收益实时对比，顶部曲线显示累计盈亏走势，底部表格展示每个人的下注、返奖、ROI
-            和未结算情况。
-          </p>
-        </div>
+      <section className="relative z-10 -mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+        <section
+          className="rounded-lg border border-white/10 bg-[#111418] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.32)] md:p-5"
+          id="profit-chart"
+        >
+          <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+            <div>
+              <h2 className="text-xl font-semibold tracking-normal text-white">
+                累计收益走势
+              </h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                每条线代表一位同事，支持按时间窗口查看盈亏变化
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {leaderRows.map((row) => (
+                <span
+                  key={row.id}
+                  className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1 text-sm text-zinc-200"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: row.color }}
+                  />
+                  {row.name}
+                  <strong className={getProfitClass(row.profit)}>
+                    {formatSignedCurrency(row.profit)}
+                  </strong>
+                </span>
+              ))}
+            </div>
+          </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="h-[330px] overflow-hidden rounded-lg border border-white/10 bg-[#07090c] p-2 md:h-[390px]">
+            <Liveline
+              fill
+              grid
+              pulse
+              scrub
+              data={[]}
+              emptyText="暂无收益数据"
+              formatTime={(time) => timeFormatter.format(new Date(time * 1000))}
+              formatValue={(value) =>
+                `${value >= 0 ? "+" : ""}${Math.round(value)}元`
+              }
+              lineWidth={2.5}
+              series={series}
+              theme="dark"
+              value={0}
+              window={chartWindow}
+              windowStyle="rounded"
+              windows={[
+                { label: "5D", secs: chartWindow },
+                { label: "3D", secs: 60 * 60 * 24 * 3 },
+                { label: "24H", secs: 60 * 60 * 24 },
+              ]}
+            />
+          </div>
+        </section>
+
+        <aside className="grid gap-3">
           <Metric
             detail={formatSignedCurrency(stats.leader.profit)}
             label="当前第一"
@@ -110,67 +180,37 @@ export function WorldCupDashboard() {
             tone={stats.totalProfit >= 0 ? "green" : "red"}
             value={formatSignedCurrency(stats.totalProfit)}
           />
-        </div>
-      </section>
 
-      <section
-        className="rounded-lg border border-white/10 bg-[#111418] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.32)] md:p-5"
-        id="profit-chart"
-      >
-        <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-end">
-          <div>
-            <h2 className="text-xl font-semibold tracking-normal text-white">
-              累计收益走势
-            </h2>
-            <p className="mt-1 text-sm text-zinc-400">
-              Multi-series Liveline，每条线代表一位同事
-            </p>
+          <div className="rounded-lg border border-white/10 bg-[#111418] p-4">
+            <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+              领先梯队
+            </div>
+            <div className="mt-4 grid gap-3">
+              {leaderRows.map((row) => (
+                <div
+                  key={row.id}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: row.color }}
+                    />
+                    <span className="truncate text-sm text-zinc-200">
+                      {row.rank}. {row.name}
+                    </span>
+                  </div>
+                  <strong
+                    className={`shrink-0 text-sm ${getProfitClass(row.profit)}`}
+                  >
+                    {formatSignedCurrency(row.profit)}
+                  </strong>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {rows.slice(0, 3).map((row) => (
-              <span
-                key={row.id}
-                className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1 text-sm text-zinc-200"
-              >
-                <span
-                  aria-hidden="true"
-                  className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: row.color }}
-                />
-                {row.name}
-                <strong className={getProfitClass(row.profit)}>
-                  {formatSignedCurrency(row.profit)}
-                </strong>
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="h-[330px] overflow-hidden rounded-lg border border-white/10 bg-[#07090c] p-2 md:h-[390px]">
-          <Liveline
-            fill
-            grid
-            pulse
-            scrub
-            data={[]}
-            emptyText="暂无收益数据"
-            formatTime={(time) => timeFormatter.format(new Date(time * 1000))}
-            formatValue={(value) =>
-              `${value >= 0 ? "+" : ""}${Math.round(value)}元`
-            }
-            lineWidth={2.5}
-            series={series}
-            theme="dark"
-            value={0}
-            window={chartWindow}
-            windowStyle="rounded"
-            windows={[
-              { label: "5D", secs: chartWindow },
-              { label: "3D", secs: 60 * 60 * 24 * 3 },
-              { label: "24H", secs: 60 * 60 * 24 },
-            ]}
-          />
-        </div>
+        </aside>
       </section>
 
       <section className="mt-6" id="profit-table">
@@ -288,6 +328,17 @@ function Metric({
         {value}
       </div>
       <div className="mt-1 text-sm text-zinc-400">{detail}</div>
+    </div>
+  );
+}
+
+function SummaryStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-r border-white/10 px-4 py-3 last:border-r-0">
+      <div className="text-xs text-zinc-500">{label}</div>
+      <div className="mt-1 text-lg font-semibold tracking-normal text-white">
+        {value}
+      </div>
     </div>
   );
 }

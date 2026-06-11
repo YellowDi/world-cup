@@ -35,7 +35,7 @@ import { emptyDashboardSnapshot } from "@/lib/world-cup-data";
 
 const chartWindow = 60 * 60 * 24 * 5;
 const glassSurfaceClass =
-  "overflow-hidden rounded-2xl border border-border bg-surface/80 shadow-lg backdrop-blur-md";
+  "overflow-hidden rounded-3xl border border-border bg-surface/80 shadow-lg backdrop-blur-md";
 
 type BettorBetGroup = {
   id: string;
@@ -357,7 +357,7 @@ export function WorldCupDashboard() {
   }
 
   return (
-    <div className="relative isolate min-h-full pb-14 pt-4 text-foreground">
+    <div className="relative isolate min-h-full py-3 text-foreground">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-0 -z-10 h-full min-h-dvh w-screen -translate-x-1/2 bg-top bg-no-repeat opacity-25"
@@ -375,7 +375,7 @@ export function WorldCupDashboard() {
             id="profit-chart"
             variant="transparent"
           >
-            <div className="flex flex-col justify-between gap-3 p-4 md:flex-row md:items-end">
+            <div className="flex flex-col justify-between gap-3 p-3 md:flex-row md:items-end">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
                   累计收益走势
@@ -401,7 +401,7 @@ export function WorldCupDashboard() {
               </div>
             </div>
 
-            <div className="h-[380px] overflow-hidden px-4 pb-4 md:h-[500px]">
+            <div className="h-[380px] overflow-hidden px-3 pb-3 md:h-[500px]">
               <Liveline
                 fill
                 grid
@@ -480,7 +480,7 @@ function DashboardTabs({
   return (
     <Surface className={glassSurfaceClass} variant="transparent">
       <Tabs className="flex min-h-[420px] flex-col" defaultSelectedKey="profit">
-        <Tabs.ListContainer className="px-4 pt-4">
+        <Tabs.ListContainer className="px-3 pt-3">
           <Tabs.List aria-label="看板数据视图">
             <Tabs.Tab id="profit">
               <Tabs.Indicator />
@@ -525,7 +525,7 @@ function SchedulePanel({
 }) {
   return (
     <section id="match-schedule">
-      <div className="flex flex-col justify-between gap-3 px-4 py-3 md:flex-row md:items-end">
+      <div className="flex flex-col justify-between gap-3 px-3 py-3 md:flex-row md:items-end">
         <div>
           <h2 className="text-lg font-semibold text-foreground">未来赛历</h2>
           <p className="mt-1 text-sm text-muted">
@@ -541,7 +541,7 @@ function SchedulePanel({
       </div>
       <div className="border-t border-border">
         {upcomingMatches.length === 0 ? (
-          <div className="p-4">
+          <div className="p-3">
             <EmptyState text="暂无未来赛程。" />
           </div>
         ) : (
@@ -561,7 +561,7 @@ function SchedulePanel({
 function ProfitTable({ rows }: { rows: DashboardSnapshot["rows"] }) {
   return (
     <section id="profit-table">
-      <div className="flex items-end justify-between gap-4 px-4 py-3">
+      <div className="flex items-end justify-between gap-4 px-3 py-3">
         <div>
           <h2 className="text-lg font-semibold text-foreground">
             个人收益详情
@@ -593,7 +593,7 @@ function ProfitTable({ rows }: { rows: DashboardSnapshot["rows"] }) {
               </Table.Header>
               <Table.Body
                 renderEmptyState={() => (
-                  <div className="px-4 py-10 text-center text-muted">
+                  <div className="px-3 py-10 text-center text-muted">
                     暂无收益数据，新增同事并提交下注后会显示排名。
                   </div>
                 )}
@@ -693,7 +693,7 @@ function SidebarMaintenanceActions({
 }) {
   return (
     <Surface className={glassSurfaceClass} variant="transparent">
-      <div className="grid gap-2 p-4">
+      <div className="grid gap-2 p-3">
         <MaintenanceModal
           buttonLabel="同事名单"
           description="新增同事、编辑姓名和启用状态"
@@ -827,7 +827,11 @@ function DashboardSidebar({
 }) {
   return (
     <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-2rem)] lg:max-h-[calc(100dvh-2rem)]">
-      <div className="shrink-0" id="data-admin">
+      <Surface
+        className={`${glassSurfaceClass} shrink-0 p-3`}
+        id="data-admin"
+        variant="transparent"
+      >
         <MaintenanceModal
           buttonLabel="提交下注"
           buttonVariant="primary"
@@ -890,7 +894,7 @@ function DashboardSidebar({
             </SubmitButton>
           </Form>
         </MaintenanceModal>
-      </div>
+      </Surface>
 
       <PendingSettlementsCard
         bets={snapshot.pendingBets}
@@ -943,7 +947,7 @@ function PendingSettlementsCard({
       onExpandedChange={setIsExpanded}
     >
       <Disclosure.Heading className="flex shrink-0">
-        <Disclosure.Trigger className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-none border-0 p-4 text-left hover:no-underline">
+        <Disclosure.Trigger className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-none border-0 p-3 text-left hover:no-underline">
           <span className="min-w-0">
             <span className="block text-lg font-semibold text-foreground">
               待结算
@@ -961,7 +965,7 @@ function PendingSettlementsCard({
         </Disclosure.Trigger>
       </Disclosure.Heading>
       <Disclosure.Content className="min-h-0 overflow-hidden lg:flex-1">
-        <div className="grid min-h-0 gap-2 overflow-y-auto border-t border-border px-4 pb-4 pt-3 lg:flex-1">
+        <div className="grid min-h-0 gap-2 overflow-y-auto border-t border-border px-3 pb-3 pt-3 lg:flex-1">
           {bets.length === 0 ? (
             <EmptyState text="暂无待结算下注。" />
           ) : (
@@ -999,7 +1003,7 @@ function BetHistoryCard({
       onExpandedChange={setIsExpanded}
     >
       <Disclosure.Heading className="flex shrink-0">
-        <Disclosure.Trigger className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-none border-0 p-4 text-left hover:no-underline">
+        <Disclosure.Trigger className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-none border-0 p-3 text-left hover:no-underline">
           <span className="min-w-0">
             <span className="block text-lg font-semibold text-foreground">
               个人投注记录
@@ -1017,7 +1021,7 @@ function BetHistoryCard({
         </Disclosure.Trigger>
       </Disclosure.Heading>
       <Disclosure.Content className="overflow-hidden">
-        <div className="max-h-96 overflow-y-auto border-t border-border px-4 pb-4 pt-3">
+        <div className="max-h-96 overflow-y-auto border-t border-border px-3 pb-3 pt-3">
           {groups.length === 0 ? (
             <EmptyState
               text={isLoading ? "下注记录加载中。" : "暂无下注记录。"}
@@ -1430,7 +1434,7 @@ function ScheduleMatchRow({
   match: Match;
 }) {
   return (
-    <div className="grid gap-3 border-b border-border px-4 py-3 last:border-b-0 md:grid-cols-[132px_minmax(0,1fr)_112px] md:items-center">
+    <div className="grid gap-3 border-b border-border px-3 py-3 last:border-b-0 md:grid-cols-[132px_minmax(0,1fr)_112px] md:items-center">
       <div className="text-sm tabular-nums text-muted">
         {dateTimeFormatter.format(new Date(match.kickoffAt))}
       </div>
@@ -1453,7 +1457,7 @@ function ScheduleMatchRow({
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-md border border-dashed border-border px-3 py-4 text-sm text-muted">
+    <div className="rounded-md border border-dashed border-border px-3 py-3 text-sm text-muted">
       {text}
     </div>
   );

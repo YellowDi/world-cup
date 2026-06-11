@@ -9,6 +9,10 @@ export const siteConfig = {
       href: "/#profit-chart",
     },
     {
+      label: "数据维护",
+      href: "/#data-admin",
+    },
+    {
       label: "个人明细",
       href: "/#profit-table",
     },
@@ -17,6 +21,10 @@ export const siteConfig = {
     {
       label: "收益走势",
       href: "/#profit-chart",
+    },
+    {
+      label: "数据维护",
+      href: "/#data-admin",
     },
     {
       label: "个人明细",

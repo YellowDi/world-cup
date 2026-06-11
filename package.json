@@ -5,12 +5,14 @@
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
+		"dev:lan": "next dev -H 0.0.0.0",
 		"db:migrate": "node scripts/migrate.mjs",
 		"build": "next build",
 		"start": "next start",
 		"lint": "eslint --fix"
 	},
 	"dependencies": {
+		"@electric-sql/pglite": "^0.5.2",
 		"@heroui/react": "3.1.0",
 		"@heroui/styles": "3.1.0",
 		"clsx": "2.1.1",

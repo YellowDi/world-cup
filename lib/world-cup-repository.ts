@@ -13,6 +13,12 @@ import type { QueryResultRow } from "pg";
 import { randomUUID } from "node:crypto";
 
 import { query, withTransaction } from "@/lib/db";
+import {
+  getScheduleDisplayTimeZone,
+  openfootballSourceKey,
+  openfootballSourceName,
+  openfootballSourceUrl,
+} from "@/lib/world-cup-schedule-config";
 
 export class DataInputError extends Error {
   status = 400;
@@ -68,6 +74,15 @@ type BetRow = QueryResultRow & {
   away_score: number | null;
 };
 
+type MatchSyncRow = QueryResultRow & {
+  source_key: string;
+  source_name: string;
+  source_url: string;
+  synced_at: Date | string;
+  imported_count: number;
+  used_cache: boolean;
+};
+
 type CreateBettorInput = {
   name: string;
   team: string;
@@ -90,6 +105,15 @@ type SettleBetInput = {
   id: string;
   payout: number;
   isWin: boolean;
+};
+
+type RecordMatchSyncInput = {
+  sourceKey: string;
+  sourceName: string;
+  sourceUrl: string;
+  syncedAt: string;
+  importedCount: number;
+  usedCache: boolean;
 };
 
 function toIso(value: Date | string) {
@@ -252,7 +276,7 @@ function buildProfitSeries(
 }
 
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
-  const [bettorResult, matchResult, betResult] = await Promise.all([
+  const [bettorResult, matchResult, betResult, syncResult] = await Promise.all([
     query<BettorRow>(
       `SELECT id, name, team, color, is_active, created_at, updated_at
        FROM bettors
@@ -275,11 +299,19 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
        JOIN matches m ON m.id = b.match_id
        ORDER BY b.submitted_at DESC`,
     ),
+    query<MatchSyncRow>(
+      `SELECT source_key, source_name, source_url, synced_at, imported_count,
+              used_cache
+       FROM match_sync_state
+       WHERE source_key = $1`,
+      [openfootballSourceKey],
+    ),
   ]);
 
   const bettors = bettorResult.rows.map(toBettor);
   const matches = matchResult.rows.map(toMatch);
   const bets = betResult.rows.map(toBetRecord);
+  const syncState = syncResult.rows[0];
 
   return {
     activeBettors: bettors.filter((bettor) => bettor.isActive),
@@ -288,6 +320,15 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     pendingBets: bets.filter((bet) => bet.status === "pending"),
     recentBets: bets.slice(0, 20),
     rows: buildSummaries(bettors, bets),
+    schedule: {
+      displayTimeZone: getScheduleDisplayTimeZone(),
+      importedCount: syncState?.imported_count ?? 0,
+      lastSyncedAt: syncState ? toIso(syncState.synced_at) : null,
+      sourceKey: syncState?.source_key ?? openfootballSourceKey,
+      sourceName: syncState?.source_name ?? openfootballSourceName,
+      sourceUrl: syncState?.source_url ?? openfootballSourceUrl,
+      usedCache: syncState?.used_cache ?? false,
+    },
     series: buildProfitSeries(bettors, bets),
   };
 }
@@ -423,4 +464,29 @@ export async function importMatches(matches: MatchImport[]) {
   });
 
   return matches.length;
+}
+
+export async function recordMatchSync(input: RecordMatchSyncInput) {
+  await query(
+    `INSERT INTO match_sync_state (
+       source_key, source_name, source_url, synced_at, imported_count, used_cache
+     )
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (source_key) DO UPDATE
+     SET source_name = EXCLUDED.source_name,
+         source_url = EXCLUDED.source_url,
+         synced_at = EXCLUDED.synced_at,
+         imported_count = EXCLUDED.imported_count,
+         used_cache = EXCLUDED.used_cache,
+         error = NULL,
+         updated_at = now()`,
+    [
+      input.sourceKey,
+      input.sourceName,
+      input.sourceUrl,
+      input.syncedAt,
+      input.importedCount,
+      input.usedCache,
+    ],
+  );
 }

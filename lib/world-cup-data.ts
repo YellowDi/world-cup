@@ -76,6 +76,16 @@ export type BettorSummary = {
   latestPick: string;
 };
 
+export type ScheduleSnapshot = {
+  sourceKey: string;
+  sourceName: string;
+  sourceUrl: string;
+  displayTimeZone: string;
+  importedCount: number;
+  lastSyncedAt: string | null;
+  usedCache: boolean;
+};
+
 export type DashboardSnapshot = {
   bettors: Bettor[];
   activeBettors: Bettor[];
@@ -83,6 +93,7 @@ export type DashboardSnapshot = {
   pendingBets: BetRecord[];
   recentBets: BetRecord[];
   rows: BettorSummary[];
+  schedule: ScheduleSnapshot;
   series: LivelineSeries[];
 };
 
@@ -93,5 +104,15 @@ export const emptyDashboardSnapshot: DashboardSnapshot = {
   pendingBets: [],
   recentBets: [],
   rows: [],
+  schedule: {
+    displayTimeZone: "Asia/Shanghai",
+    importedCount: 0,
+    lastSyncedAt: null,
+    sourceKey: "openfootball-worldcup-2026",
+    sourceName: "openfootball/worldcup.json",
+    sourceUrl:
+      "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json",
+    usedCache: false,
+  },
   series: [],
 };

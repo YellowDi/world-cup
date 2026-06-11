@@ -24,6 +24,17 @@ CREATE TABLE IF NOT EXISTS matches (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS match_sync_state (
+  source_key text PRIMARY KEY,
+  source_name text NOT NULL,
+  source_url text NOT NULL,
+  synced_at timestamptz NOT NULL DEFAULT now(),
+  imported_count integer NOT NULL DEFAULT 0,
+  used_cache boolean NOT NULL DEFAULT false,
+  error text,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS bets (
   id text PRIMARY KEY,
   bettor_id text NOT NULL REFERENCES bettors(id),
@@ -57,6 +68,7 @@ CREATE TABLE IF NOT EXISTS bets (
 
 CREATE INDEX IF NOT EXISTS bettors_active_idx ON bettors (is_active);
 CREATE INDEX IF NOT EXISTS matches_kickoff_at_idx ON matches (kickoff_at);
+CREATE INDEX IF NOT EXISTS match_sync_state_synced_at_idx ON match_sync_state (synced_at);
 CREATE INDEX IF NOT EXISTS bets_bettor_id_idx ON bets (bettor_id);
 CREATE INDEX IF NOT EXISTS bets_match_id_idx ON bets (match_id);
 CREATE INDEX IF NOT EXISTS bets_status_idx ON bets (status);

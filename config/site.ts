@@ -13,6 +13,10 @@ export const siteConfig = {
       href: "/#data-admin",
     },
     {
+      label: "未来赛历",
+      href: "/#match-schedule",
+    },
+    {
       label: "个人明细",
       href: "/#profit-table",
     },
@@ -25,6 +29,10 @@ export const siteConfig = {
     {
       label: "数据维护",
       href: "/#data-admin",
+    },
+    {
+      label: "未来赛历",
+      href: "/#match-schedule",
     },
     {
       label: "个人明细",

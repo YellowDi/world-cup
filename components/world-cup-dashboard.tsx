@@ -26,24 +26,23 @@ const percentFormatter = new Intl.NumberFormat("zh-CN", {
   style: "percent",
 });
 
-const timeFormatter = new Intl.DateTimeFormat("zh-CN", {
-  day: "2-digit",
-  hour: "2-digit",
-  hour12: false,
-  minute: "2-digit",
-  month: "2-digit",
-});
-
-const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
-  day: "2-digit",
-  hour: "2-digit",
-  hour12: false,
-  minute: "2-digit",
-  month: "2-digit",
-});
-
 function formatCurrency(value: number) {
   return currencyFormatter.format(value);
+}
+
+function createDateTimeFormatter(timeZone: string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone,
+  });
+}
+
+function getTimeZoneLabel(timeZone: string) {
+  return timeZone === "Asia/Shanghai" ? "北京时间" : timeZone;
 }
 
 function formatSignedCurrency(value: number) {
@@ -68,7 +67,7 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "操作失败";
 }
 
-async function requestJson(path: string, init?: RequestInit) {
+async function requestJson<T = unknown>(path: string, init?: RequestInit) {
   const response = await fetch(path, {
     ...init,
     headers: {
@@ -84,7 +83,7 @@ async function requestJson(path: string, init?: RequestInit) {
     throw new Error(payload?.error ?? "请求失败");
   }
 
-  return payload;
+  return payload as T;
 }
 
 function formatMatchTitle(match: Match) {
@@ -96,7 +95,10 @@ function formatMatchTitle(match: Match) {
   return `${match.homeTeam} vs ${match.awayTeam}${score}`;
 }
 
-function formatMatchOption(match: Match) {
+function formatMatchOption(
+  match: Match,
+  dateTimeFormatter: Intl.DateTimeFormat,
+) {
   return `${dateTimeFormatter.format(new Date(match.kickoffAt))} · ${formatMatchTitle(match)}`;
 }
 
@@ -169,6 +171,22 @@ export function WorldCupDashboard() {
   }, [loadDashboard]);
 
   const leaderRows = useMemo(() => snapshot.rows.slice(0, 3), [snapshot.rows]);
+  const dateTimeFormatter = useMemo(
+    () => createDateTimeFormatter(snapshot.schedule.displayTimeZone),
+    [snapshot.schedule.displayTimeZone],
+  );
+  const timeZoneLabel = getTimeZoneLabel(snapshot.schedule.displayTimeZone);
+  const upcomingMatches = useMemo(() => {
+    const now = Date.now() - 1000 * 60 * 30;
+
+    return snapshot.matches
+      .filter(
+        (match) =>
+          match.status !== "finished" &&
+          new Date(match.kickoffAt).getTime() >= now,
+      )
+      .slice(0, 16);
+  }, [snapshot.matches]);
 
   async function runAction(
     successMessage: string,
@@ -266,27 +284,11 @@ export function WorldCupDashboard() {
     });
   }
 
-  async function handleImportMatches(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const rawJson = getFormString(formData, "matchesJson");
-
-    await runAction("赛历已导入", async () => {
-      let parsed: unknown;
-
-      try {
-        parsed = JSON.parse(rawJson);
-      } catch {
-        throw new Error("赛历 JSON 格式不正确");
-      }
-
-      await requestJson("/api/matches/import", {
-        body: JSON.stringify(parsed),
+  async function handleSyncMatches() {
+    await runAction("赛历已同步", async () => {
+      await requestJson("/api/matches/sync", {
         method: "POST",
       });
-      form.reset();
     });
   }
 
@@ -364,7 +366,9 @@ export function WorldCupDashboard() {
             scrub
             data={[]}
             emptyText={isLoading ? "收益数据加载中" : "暂无收益数据"}
-            formatTime={(time) => timeFormatter.format(new Date(time * 1000))}
+            formatTime={(time) =>
+              dateTimeFormatter.format(new Date(time * 1000))
+            }
             formatValue={(value) =>
               `${value >= 0 ? "+" : ""}${Math.round(value)}元`
             }
@@ -429,27 +433,45 @@ export function WorldCupDashboard() {
               </div>
             </Panel>
 
-            <Panel title="赛历导入">
-              <form className="grid gap-3" onSubmit={handleImportMatches}>
-                <label className="grid gap-1 text-sm text-zinc-300">
-                  <span>赛历 JSON</span>
-                  <textarea
-                    required
-                    className="min-h-40 rounded-md border border-white/10 bg-[#07090c] px-3 py-2 font-mono text-xs text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 focus:border-sky-400"
-                    name="matchesJson"
-                    placeholder='[{"sourceId":"match-001","kickoffAt":"2026-06-12T19:00:00.000Z","stage":"小组赛","homeTeam":"A队","awayTeam":"B队","status":"scheduled"}]'
-                  />
-                </label>
-                <SubmitButton disabled={isSubmitting}>导入赛历</SubmitButton>
-              </form>
+            <Panel title="赛历同步">
+              <div className="grid gap-3">
+                <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-zinc-300">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{snapshot.schedule.sourceName}</span>
+                    <span className="rounded-md bg-white/[0.06] px-2 py-1 text-xs text-zinc-400">
+                      {snapshot.matches.length} 场
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs leading-5 text-zinc-500">
+                    {snapshot.schedule.lastSyncedAt
+                      ? `${dateTimeFormatter.format(new Date(snapshot.schedule.lastSyncedAt))} 同步`
+                      : "尚未同步"}
+                    {snapshot.schedule.usedCache ? " · 使用本地缓存" : ""}
+                    {" · "}
+                    {timeZoneLabel}
+                  </div>
+                </div>
+                <ActionButton
+                  disabled={isSubmitting}
+                  onClick={() => void handleSyncMatches()}
+                >
+                  同步赛历
+                </ActionButton>
+              </div>
 
               <div className="mt-4 max-h-44 overflow-y-auto rounded-md border border-white/10">
-                {snapshot.matches.length === 0 ? (
-                  <EmptyState text="暂无比赛，导入赛历后可提交下注。" />
+                {upcomingMatches.length === 0 ? (
+                  <EmptyState text="暂无未来赛程，同步赛历后可提交下注。" />
                 ) : (
-                  snapshot.matches
-                    .slice(0, 8)
-                    .map((match) => <MatchRow key={match.id} match={match} />)
+                  upcomingMatches
+                    .slice(0, 6)
+                    .map((match) => (
+                      <MatchRow
+                        key={match.id}
+                        dateTimeFormatter={dateTimeFormatter}
+                        match={match}
+                      />
+                    ))
                 )}
               </div>
             </Panel>
@@ -475,7 +497,7 @@ export function WorldCupDashboard() {
                     label="比赛"
                     name="matchId"
                     options={snapshot.matches.map((match) => ({
-                      label: formatMatchOption(match),
+                      label: formatMatchOption(match, dateTimeFormatter),
                       value: match.id,
                     }))}
                   />
@@ -524,6 +546,43 @@ export function WorldCupDashboard() {
               </div>
             </Panel>
           </div>
+        </div>
+      </section>
+
+      <section className="mt-6" id="match-schedule">
+        <div className="mb-3 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+          <div>
+            <h2 className="text-xl font-semibold tracking-normal text-white">
+              未来赛历
+            </h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              {timeZoneLabel} · {snapshot.matches.length} 场比赛
+            </p>
+          </div>
+          {snapshot.schedule.lastSyncedAt ? (
+            <span className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-1 text-sm text-zinc-300">
+              {dateTimeFormatter.format(
+                new Date(snapshot.schedule.lastSyncedAt),
+              )}
+              同步
+            </span>
+          ) : null}
+        </div>
+
+        <div className="overflow-hidden rounded-lg border border-white/10 bg-[#111418]">
+          {upcomingMatches.length === 0 ? (
+            <div className="p-4">
+              <EmptyState text="暂无未来赛程。" />
+            </div>
+          ) : (
+            upcomingMatches.map((match) => (
+              <ScheduleMatchRow
+                key={match.id}
+                dateTimeFormatter={dateTimeFormatter}
+                match={match}
+              />
+            ))
+          )}
         </div>
       </section>
 
@@ -798,6 +857,27 @@ function SubmitButton({
   );
 }
 
+function ActionButton({
+  children,
+  disabled,
+  onClick,
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className="min-h-10 rounded-md bg-sky-400 px-4 py-2 text-sm font-semibold text-[#061016] transition-colors hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
+      disabled={disabled}
+      type="button"
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
 function BettorEditForm({
   bettor,
   disabled,
@@ -874,7 +954,13 @@ function PendingBetForm({
   );
 }
 
-function MatchRow({ match }: { match: Match }) {
+function MatchRow({
+  dateTimeFormatter,
+  match,
+}: {
+  dateTimeFormatter: Intl.DateTimeFormat;
+  match: Match;
+}) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2 text-sm last:border-b-0">
       <div className="min-w-0">
@@ -887,6 +973,37 @@ function MatchRow({ match }: { match: Match }) {
       <span className="shrink-0 rounded-md bg-white/[0.06] px-2 py-1 text-xs text-zinc-400">
         {getStatusLabel(match.status)}
       </span>
+    </div>
+  );
+}
+
+function ScheduleMatchRow({
+  dateTimeFormatter,
+  match,
+}: {
+  dateTimeFormatter: Intl.DateTimeFormat;
+  match: Match;
+}) {
+  return (
+    <div className="grid gap-3 border-b border-white/10 px-4 py-3 last:border-b-0 md:grid-cols-[132px_minmax(0,1fr)_112px] md:items-center">
+      <div className="text-sm tabular-nums text-zinc-300">
+        {dateTimeFormatter.format(new Date(match.kickoffAt))}
+      </div>
+      <div className="min-w-0">
+        <div className="truncate font-medium text-white">
+          {formatMatchTitle(match)}
+        </div>
+        <div className="mt-1 truncate text-xs text-zinc-500">
+          {match.stage}
+          {match.groupName ? ` · ${match.groupName}` : ""}
+          {match.venue ? ` · ${match.venue}` : ""}
+        </div>
+      </div>
+      <div className="flex justify-start md:justify-end">
+        <span className="rounded-md bg-white/[0.06] px-2 py-1 text-xs text-zinc-400">
+          {getStatusLabel(match.status)}
+        </span>
+      </div>
     </div>
   );
 }

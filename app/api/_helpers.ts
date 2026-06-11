@@ -112,11 +112,13 @@ export function jsonOk(data: unknown, status = 200) {
 }
 
 export function jsonError(error: unknown) {
-  if (error instanceof DataInputError) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: error.status },
-    );
+  const status =
+    typeof (error as { status?: unknown })?.status === "number"
+      ? (error as { status: number }).status
+      : null;
+
+  if (error instanceof Error && status) {
+    return NextResponse.json({ error: error.message }, { status });
   }
 
   if (error instanceof Error && error.message.includes("DATABASE_URL")) {

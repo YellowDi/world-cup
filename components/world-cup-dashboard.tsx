@@ -851,15 +851,15 @@ function DashboardSidebar({
   onUpdateBettor: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto">
+    <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-2rem)] lg:max-h-[calc(100dvh-2rem)]">
       <Surface
-        className={glassSurfaceClass}
+        className={`${glassSurfaceClass} shrink-0`}
         id="data-admin"
         variant="transparent"
       >
         <div className="p-4 pb-3">
           <h2 className="text-lg font-semibold text-foreground">快速操作</h2>
-          <p className="mt-1 text-sm text-muted">提交下注和结算待处理记录</p>
+          <p className="mt-1 text-sm text-muted">提交新的比赛下注记录</p>
         </div>
         <div className="grid gap-3 px-4 pb-4">
           <StatusMessage
@@ -934,39 +934,15 @@ function DashboardSidebar({
                 </SubmitButton>
               </Form>
             </MaintenanceModal>
-
-            <MaintenanceModal
-              buttonLabel="待结算"
-              description="结算待处理的下注记录"
-              isDisabled={isLoading}
-              status={
-                <StatusMessage
-                  actionError={actionError}
-                  isLoading={isLoading}
-                  loadError={loadError}
-                  notice={notice}
-                />
-              }
-              title="待结算"
-            >
-              <div className="grid max-h-[520px] gap-2 overflow-y-auto">
-                {snapshot.pendingBets.length === 0 ? (
-                  <EmptyState text="暂无待结算下注。" />
-                ) : (
-                  snapshot.pendingBets.map((bet) => (
-                    <PendingBetForm
-                      key={bet.id}
-                      bet={bet}
-                      disabled={isSubmitting}
-                      onSubmit={onSettleBet}
-                    />
-                  ))
-                )}
-              </div>
-            </MaintenanceModal>
           </div>
         </div>
       </Surface>
+
+      <PendingSettlementsCard
+        bets={snapshot.pendingBets}
+        disabled={isSubmitting}
+        onSubmit={onSettleBet}
+      />
 
       <BetHistoryCard
         dateTimeFormatter={dateTimeFormatter}
@@ -974,7 +950,7 @@ function DashboardSidebar({
         isLoading={isLoading}
       />
 
-      <div className="mt-auto">
+      <div className="shrink-0 lg:mt-auto">
         <SidebarMaintenanceActions
           actionError={actionError}
           dateTimeFormatter={dateTimeFormatter}
@@ -994,6 +970,47 @@ function DashboardSidebar({
   );
 }
 
+function PendingSettlementsCard({
+  bets,
+  disabled,
+  onSubmit,
+}: {
+  bets: BetRecord[];
+  disabled: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <Surface
+      className={`${glassSurfaceClass} min-h-0 shrink-0 lg:flex lg:max-h-80 lg:flex-col`}
+      variant="transparent"
+    >
+      <div className="flex shrink-0 items-start justify-between gap-3 p-4 pb-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">待结算</h2>
+          <p className="mt-1 text-sm text-muted">结算待处理的下注记录</p>
+        </div>
+        <Chip className="shrink-0" size="sm" variant="soft">
+          {bets.length} 条
+        </Chip>
+      </div>
+      <div className="grid min-h-0 gap-2 overflow-y-auto px-4 pb-4 lg:flex-1">
+        {bets.length === 0 ? (
+          <EmptyState text="暂无待结算下注。" />
+        ) : (
+          bets.map((bet) => (
+            <PendingBetForm
+              key={bet.id}
+              bet={bet}
+              disabled={disabled}
+              onSubmit={onSubmit}
+            />
+          ))
+        )}
+      </div>
+    </Surface>
+  );
+}
+
 function BetHistoryCard({
   dateTimeFormatter,
   groups,
@@ -1004,12 +1021,15 @@ function BetHistoryCard({
   isLoading: boolean;
 }) {
   return (
-    <Surface className={glassSurfaceClass} variant="transparent">
-      <div className="p-4 pb-3">
+    <Surface
+      className={`${glassSurfaceClass} min-h-0 lg:flex lg:flex-1 lg:flex-col`}
+      variant="transparent"
+    >
+      <div className="shrink-0 p-4 pb-3">
         <h2 className="text-lg font-semibold text-foreground">个人投注记录</h2>
         <p className="mt-1 text-sm text-muted">按同事折叠展示完整下注记录</p>
       </div>
-      <div className="px-4 pb-4">
+      <div className="min-h-0 px-4 pb-4 lg:flex-1 lg:overflow-y-auto">
         {groups.length === 0 ? (
           <EmptyState
             text={isLoading ? "下注记录加载中。" : "暂无下注记录。"}
@@ -1355,7 +1375,7 @@ function PendingBetForm({
 }) {
   return (
     <Form
-      className="grid gap-2 rounded-md border border-border bg-surface-secondary p-3 sm:grid-cols-[minmax(0,1fr)_120px_104px_72px] sm:items-end"
+      className="grid gap-2 rounded-md border border-border bg-surface-secondary p-3"
       onSubmit={onSubmit}
     >
       <input name="id" type="hidden" value={bet.id} />

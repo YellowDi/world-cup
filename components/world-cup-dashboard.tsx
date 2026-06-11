@@ -5,7 +5,6 @@ import type {
   Bettor,
   DashboardSnapshot,
   Match,
-  ScheduleSnapshot,
 } from "@/lib/world-cup-data";
 import type { FormEvent, ReactNode } from "react";
 
@@ -24,6 +23,7 @@ import {
   Label,
   ListBox,
   Modal,
+  ScrollShadow,
   Select,
   Surface,
   Tabs,
@@ -260,15 +260,23 @@ export function WorldCupDashboard() {
   );
   const timeZoneLabel = getTimeZoneLabel(snapshot.schedule.displayTimeZone);
   const upcomingMatches = useMemo(() => {
-    const now = Date.now() - 1000 * 60 * 30;
+    const now = Date.now();
+    const cutoff = now + bettingWindowMs;
 
     return snapshot.matches
-      .filter(
-        (match) =>
+      .filter((match) => {
+        const kickoffTime = new Date(match.kickoffAt).getTime();
+
+        return (
           match.status !== "finished" &&
-          new Date(match.kickoffAt).getTime() >= now,
-      )
-      .slice(0, 16);
+          kickoffTime >= now &&
+          kickoffTime <= cutoff
+        );
+      })
+      .sort(
+        (a, b) =>
+          new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime(),
+      );
   }, [snapshot.matches]);
   const betGroups = useMemo<BettorBetGroup[]>(() => {
     const betsByBettor = new Map<string, BetRecord[]>();
@@ -476,14 +484,7 @@ export function WorldCupDashboard() {
             </div>
           </Surface>
 
-          <DashboardTabs
-            dateTimeFormatter={dateTimeFormatter}
-            rows={snapshot.rows}
-            schedule={snapshot.schedule}
-            timeZoneLabel={timeZoneLabel}
-            totalMatches={snapshot.matches.length}
-            upcomingMatches={upcomingMatches}
-          />
+          <ProfitTable rows={snapshot.rows} />
         </div>
 
         <DashboardSidebar
@@ -505,102 +506,6 @@ export function WorldCupDashboard() {
         />
       </div>
     </div>
-  );
-}
-
-function DashboardTabs({
-  dateTimeFormatter,
-  rows,
-  schedule,
-  timeZoneLabel,
-  totalMatches,
-  upcomingMatches,
-}: {
-  dateTimeFormatter: Intl.DateTimeFormat;
-  rows: DashboardSnapshot["rows"];
-  schedule: ScheduleSnapshot;
-  timeZoneLabel: string;
-  totalMatches: number;
-  upcomingMatches: Match[];
-}) {
-  return (
-    <Surface className={glassSurfaceClass} variant="transparent">
-      <Tabs className="flex min-h-[420px] flex-col" defaultSelectedKey="profit">
-        <Tabs.ListContainer className="px-3 pt-3">
-          <Tabs.List aria-label="看板数据视图">
-            <Tabs.Tab id="profit">
-              <Tabs.Indicator />
-              收益表格
-            </Tabs.Tab>
-            <Tabs.Tab id="schedule">
-              <Tabs.Indicator />
-              未来赛历
-            </Tabs.Tab>
-          </Tabs.List>
-        </Tabs.ListContainer>
-
-        <Tabs.Panel className="min-h-0 flex-1 p-0" id="profit">
-          <ProfitTable rows={rows} />
-        </Tabs.Panel>
-        <Tabs.Panel className="min-h-0 flex-1 p-0" id="schedule">
-          <SchedulePanel
-            dateTimeFormatter={dateTimeFormatter}
-            schedule={schedule}
-            timeZoneLabel={timeZoneLabel}
-            totalMatches={totalMatches}
-            upcomingMatches={upcomingMatches}
-          />
-        </Tabs.Panel>
-      </Tabs>
-    </Surface>
-  );
-}
-
-function SchedulePanel({
-  dateTimeFormatter,
-  schedule,
-  timeZoneLabel,
-  totalMatches,
-  upcomingMatches,
-}: {
-  dateTimeFormatter: Intl.DateTimeFormat;
-  schedule: ScheduleSnapshot;
-  timeZoneLabel: string;
-  totalMatches: number;
-  upcomingMatches: Match[];
-}) {
-  return (
-    <section id="match-schedule">
-      <div className="flex flex-col justify-between gap-3 px-3 py-3 md:flex-row md:items-end">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">未来赛历</h2>
-          <p className="mt-1 text-sm text-muted">
-            {timeZoneLabel} · {totalMatches} 场比赛
-          </p>
-        </div>
-        {schedule.lastSyncedAt ? (
-          <Chip variant="secondary">
-            {dateTimeFormatter.format(new Date(schedule.lastSyncedAt))}
-            同步
-          </Chip>
-        ) : null}
-      </div>
-      <div className="border-t border-border">
-        {upcomingMatches.length === 0 ? (
-          <div className="p-3">
-            <EmptyState text="暂无未来赛程。" />
-          </div>
-        ) : (
-          upcomingMatches.map((match) => (
-            <ScheduleMatchRow
-              key={match.id}
-              dateTimeFormatter={dateTimeFormatter}
-              match={match}
-            />
-          ))
-        )}
-      </div>
-    </section>
   );
 }
 
@@ -1087,6 +992,14 @@ function DashboardSidebar({
         </MaintenanceModal>
       </Surface>
 
+      <ScheduleCard
+        dateTimeFormatter={dateTimeFormatter}
+        schedule={snapshot.schedule}
+        timeZoneLabel={timeZoneLabel}
+        totalMatches={snapshot.matches.length}
+        upcomingMatches={upcomingMatches}
+      />
+
       <PendingSettlementsCard
         bets={snapshot.pendingBets}
         disabled={isSubmitting}
@@ -1116,6 +1029,81 @@ function DashboardSidebar({
         />
       </div>
     </aside>
+  );
+}
+
+function ScheduleCard({
+  dateTimeFormatter,
+  schedule,
+  timeZoneLabel,
+  totalMatches,
+  upcomingMatches,
+}: {
+  dateTimeFormatter: Intl.DateTimeFormat;
+  schedule: DashboardSnapshot["schedule"];
+  timeZoneLabel: string;
+  totalMatches: number;
+  upcomingMatches: Match[];
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  return (
+    <Disclosure
+      aria-label="未来赛历"
+      className={`${glassSurfaceClass} min-h-0 shrink-0 lg:flex lg:max-h-72 lg:flex-col`}
+      isExpanded={isExpanded}
+      onExpandedChange={setIsExpanded}
+    >
+      <Disclosure.Heading className="flex shrink-0">
+        <Disclosure.Trigger className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-none border-0 p-3 text-left hover:no-underline">
+          <span className="min-w-0">
+            <span className="block text-lg font-semibold text-foreground">
+              未来赛历
+            </span>
+            <span className="mt-1 block text-sm text-muted">
+              未来 7 天可关注赛程
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-2">
+            <Chip size="sm" variant="soft">
+              {upcomingMatches.length} 场
+            </Chip>
+            <Disclosure.Indicator className="size-4 text-muted" />
+          </span>
+        </Disclosure.Trigger>
+      </Disclosure.Heading>
+      <Disclosure.Content className="min-h-0 overflow-hidden lg:flex-1">
+        <div className="grid min-h-0 gap-3 border-t border-border px-3 pb-3 pt-3 lg:flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+            <span>
+              {timeZoneLabel} · 全部 {totalMatches} 场
+            </span>
+            {schedule.lastSyncedAt ? (
+              <Chip size="sm" variant="soft">
+                {dateTimeFormatter.format(new Date(schedule.lastSyncedAt))}
+                同步
+              </Chip>
+            ) : null}
+          </div>
+
+          {upcomingMatches.length === 0 ? (
+            <EmptyState text="未来 7 天暂无赛程。" />
+          ) : (
+            <ScrollShadow className="max-h-64" size={32}>
+              <div className="overflow-hidden rounded-md border border-border">
+                {upcomingMatches.map((match) => (
+                  <MatchRow
+                    key={match.id}
+                    dateTimeFormatter={dateTimeFormatter}
+                    match={match}
+                  />
+                ))}
+              </div>
+            </ScrollShadow>
+          )}
+        </div>
+      </Disclosure.Content>
+    </Disclosure>
   );
 }
 
@@ -1823,35 +1811,6 @@ function MatchRow({
       <Chip className="shrink-0" size="sm" variant="soft">
         {getStatusLabel(match.status)}
       </Chip>
-    </div>
-  );
-}
-
-function ScheduleMatchRow({
-  dateTimeFormatter,
-  match,
-}: {
-  dateTimeFormatter: Intl.DateTimeFormat;
-  match: Match;
-}) {
-  return (
-    <div className="grid gap-3 border-b border-border px-3 py-3 last:border-b-0 md:grid-cols-[132px_minmax(0,1fr)_112px] md:items-center">
-      <div className="text-sm tabular-nums text-muted">
-        {dateTimeFormatter.format(new Date(match.kickoffAt))}
-      </div>
-      <div className="min-w-0">
-        <div className="truncate font-medium">{formatMatchTitle(match)}</div>
-        <div className="mt-1 truncate text-xs text-muted">
-          {match.stage}
-          {match.groupName ? ` · ${match.groupName}` : ""}
-          {match.venue ? ` · ${match.venue}` : ""}
-        </div>
-      </div>
-      <div className="flex justify-start md:justify-end">
-        <Chip size="sm" variant="soft">
-          {getStatusLabel(match.status)}
-        </Chip>
-      </div>
     </div>
   );
 }

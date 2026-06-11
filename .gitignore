@@ -38,3 +38,10 @@ next-env.d.ts
 yarn.lock
 package-lock.json
 bun.lockb
+
+# agent configs
+.mimocode/
+AGENTS.md
+CLAUDE.md
+agents.md
+claude.md

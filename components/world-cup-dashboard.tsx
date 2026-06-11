@@ -1180,7 +1180,7 @@ function PendingSettlementsCard({
   disabled: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <Disclosure
@@ -1236,7 +1236,7 @@ function BetHistoryCard({
   groups: BettorBetGroup[];
   isLoading: boolean;
 }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <Disclosure
@@ -1274,7 +1274,7 @@ function BetHistoryCard({
               allowsMultipleExpanded
               aria-label="个人投注记录"
               className="grid gap-2"
-              defaultExpandedKeys={[groups[0].id]}
+              defaultExpandedKeys={[]}
             >
               {groups.map((group) => (
                 <BetGroupDisclosure

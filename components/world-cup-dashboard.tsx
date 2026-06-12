@@ -395,12 +395,28 @@ export function WorldCupDashboard({
 
     const formData = new FormData(event.currentTarget);
     const id = getFormString(formData, "id");
+    const result = getFormString(formData, "isWin");
+
+    if (result !== "true" && result !== "false") {
+      setActionError("请选择结算结果");
+
+      return;
+    }
+
+    const isWin = result === "true";
+    const odds = Number(getFormString(formData, "odds"));
+
+    if (isWin && (!Number.isFinite(odds) || odds <= 0)) {
+      setActionError("命中倍率必须大于 0");
+
+      return;
+    }
 
     await runAction("下注已结算", async () => {
       await requestJson(`/api/bets/${id}/settle`, {
         body: JSON.stringify({
-          isWin: getFormString(formData, "isWin") === "true",
-          payout: Number(getFormString(formData, "payout")),
+          isWin,
+          odds: isWin ? odds : 0,
         }),
         method: "PATCH",
       });
@@ -1815,10 +1831,9 @@ function PendingBetSettlementModal({
                       ]}
                     />
                     <Field
-                      required
-                      label="返奖"
-                      min="0"
-                      name="payout"
+                      label="命中倍率（未中留空）"
+                      min="0.01"
+                      name="odds"
                       step="0.01"
                       type="number"
                     />

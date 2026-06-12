@@ -103,8 +103,8 @@ type CreateBetInput = {
 
 type SettleBetInput = {
   id: string;
-  payout: number;
   isWin: boolean;
+  odds: number;
 };
 
 type RecordMatchSyncInput = {
@@ -426,13 +426,13 @@ export async function settleBet(input: SettleBetInput) {
   const result = await query(
     `UPDATE bets
      SET status = 'settled',
-         payout = $2,
-         is_win = $3,
+         payout = CASE WHEN $2 THEN round(stake * $3::numeric, 2) ELSE 0 END,
+         is_win = $2,
          settled_at = now(),
          updated_at = now()
      WHERE id = $1 AND status = 'pending'
      RETURNING id`,
-    [input.id, input.payout, input.isWin],
+    [input.id, input.isWin, input.odds],
   );
 
   if (result.rowCount === 0) {

@@ -4,7 +4,7 @@ import {
   jsonOk,
   readJson,
   requiredBoolean,
-  requiredNonNegativeNumber,
+  requiredPositiveNumber,
 } from "@/app/api/_helpers";
 import { settleBet } from "@/lib/world-cup-repository";
 
@@ -17,10 +17,10 @@ export async function PATCH(
   try {
     const { id } = await context.params;
     const body = asObject(await readJson(request));
-    const payout = requiredNonNegativeNumber(body, "payout", "返奖");
     const isWin = requiredBoolean(body, "isWin", "是否命中");
+    const odds = isWin ? requiredPositiveNumber(body, "odds", "命中倍率") : 0;
 
-    await settleBet({ id, isWin, payout });
+    await settleBet({ id, isWin, odds });
 
     return jsonOk({ ok: true });
   } catch (error) {

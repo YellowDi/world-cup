@@ -84,7 +84,12 @@ function createDateTimeFormatter(timeZone: string) {
 }
 
 function createChartTimeFormatter(timeZone: string) {
-  return new Intl.DateTimeFormat("zh-CN", {
+  const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+    day: "numeric",
+    month: "long",
+    timeZone,
+  });
+  const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
     day: "numeric",
     hour: "2-digit",
     hour12: false,
@@ -92,6 +97,18 @@ function createChartTimeFormatter(timeZone: string) {
     month: "long",
     timeZone,
   });
+
+  return (date: Date) => {
+    const parts = dateTimeFormatter.formatToParts(date);
+    const hour = parts.find((part) => part.type === "hour")?.value;
+    const minute = parts.find((part) => part.type === "minute")?.value;
+
+    if ((hour === "00" || hour === "24") && minute === "00") {
+      return dateFormatter.format(date);
+    }
+
+    return dateTimeFormatter.format(date);
+  };
 }
 
 function getTimeZoneLabel(timeZone: string) {
@@ -530,7 +547,7 @@ export function WorldCupDashboard({
                   data={[]}
                   emptyText={isLoading ? "收益数据加载中" : "暂无收益数据"}
                   formatTime={(time) =>
-                    chartTimeFormatter.format(new Date(time * 1000))
+                    chartTimeFormatter(new Date(time * 1000))
                   }
                   formatValue={(value) =>
                     `${value >= 0 ? "+" : ""}${Math.round(value)}元`

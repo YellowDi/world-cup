@@ -34,7 +34,8 @@ import { Liveline } from "liveline";
 
 import { emptyDashboardSnapshot } from "@/lib/world-cup-data";
 
-const chartWindow = 60 * 60 * 24 * 5;
+const secondsPerDay = 60 * 60 * 24;
+const chartWindow = secondsPerDay * 7;
 const bettingWindowMs = 1000 * 60 * 60 * 24 * 7;
 const betBackfillWindowMs = 1000 * 60 * 60 * 24 * 2;
 const glassSurfaceClass =
@@ -82,6 +83,17 @@ function createDateTimeFormatter(timeZone: string) {
   });
 }
 
+function createChartTimeFormatter(timeZone: string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    day: "numeric",
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    month: "long",
+    timeZone,
+  });
+}
+
 function getTimeZoneLabel(timeZone: string) {
   return timeZone === "Asia/Shanghai" ? "北京时间" : timeZone;
 }
@@ -120,6 +132,24 @@ function getBetStatusLabel(bet: BetRecord) {
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "操作失败";
+}
+
+function getAllProfitChartWindow(series: DashboardSnapshot["series"]) {
+  let earliestTime = Infinity;
+
+  for (const item of series) {
+    for (const point of item.data) {
+      earliestTime = Math.min(earliestTime, point.time);
+    }
+  }
+
+  if (!Number.isFinite(earliestTime)) {
+    return chartWindow + 1;
+  }
+
+  return Math.ceil(
+    Math.max(chartWindow + 1, Date.now() / 1000 - earliestTime + secondsPerDay),
+  );
 }
 
 async function requestJson<T = unknown>(path: string, init?: RequestInit) {
@@ -263,6 +293,20 @@ export function WorldCupDashboard({
     () => createDateTimeFormatter(snapshot.schedule.displayTimeZone),
     [snapshot.schedule.displayTimeZone],
   );
+  const chartTimeFormatter = useMemo(
+    () => createChartTimeFormatter(snapshot.schedule.displayTimeZone),
+    [snapshot.schedule.displayTimeZone],
+  );
+  const profitChartWindows = useMemo(() => {
+    const allWindow = getAllProfitChartWindow(snapshot.series);
+
+    return [
+      { label: "7D", secs: chartWindow },
+      { label: "3D", secs: secondsPerDay * 3 },
+      { label: "24H", secs: secondsPerDay },
+      { label: "全部", secs: allWindow },
+    ];
+  }, [snapshot.series]);
   const timeZoneLabel = getTimeZoneLabel(snapshot.schedule.displayTimeZone);
   const upcomingMatches = useMemo(() => {
     const now = Date.now();
@@ -456,7 +500,7 @@ export function WorldCupDashboard({
                   累计收益走势
                 </h2>
                 <p className="mt-1 text-sm text-muted">
-                  支持按时间窗口查看盈亏变化
+                  已结算收益按比赛日期归集
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -477,31 +521,31 @@ export function WorldCupDashboard({
             </div>
 
             <div className="h-[380px] overflow-hidden px-3 pb-3 md:h-[500px]">
-              <Liveline
-                fill
-                grid
-                pulse
-                scrub
-                data={[]}
-                emptyText={isLoading ? "收益数据加载中" : "暂无收益数据"}
-                formatTime={(time) =>
-                  dateTimeFormatter.format(new Date(time * 1000))
-                }
-                formatValue={(value) =>
-                  `${value >= 0 ? "+" : ""}${Math.round(value)}元`
-                }
-                lineWidth={2.5}
-                series={snapshot.series}
-                theme="dark"
-                value={0}
-                window={chartWindow}
-                windowStyle="rounded"
-                windows={[
-                  { label: "5D", secs: chartWindow },
-                  { label: "3D", secs: 60 * 60 * 24 * 3 },
-                  { label: "24H", secs: 60 * 60 * 24 },
-                ]}
-              />
+              <div className="flex h-full min-h-0 flex-col">
+                <Liveline
+                  fill
+                  grid
+                  pulse
+                  scrub
+                  data={[]}
+                  emptyText={isLoading ? "收益数据加载中" : "暂无收益数据"}
+                  formatTime={(time) =>
+                    chartTimeFormatter.format(new Date(time * 1000))
+                  }
+                  formatValue={(value) =>
+                    `${value >= 0 ? "+" : ""}${Math.round(value)}元`
+                  }
+                  lineWidth={2.5}
+                  referenceLine={{ label: "0元", value: 0 }}
+                  series={snapshot.series}
+                  style={{ flex: "1 1 0", height: "auto", minHeight: 0 }}
+                  theme="dark"
+                  value={0}
+                  window={chartWindow}
+                  windowStyle="rounded"
+                  windows={profitChartWindows}
+                />
+              </div>
             </div>
           </Surface>
 

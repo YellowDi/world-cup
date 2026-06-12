@@ -256,22 +256,21 @@ function buildProfitSeries(
   bettors: Bettor[],
   bets: BetRecord[],
 ): LivelineSeries[] {
+  const getProfitTime = (bet: BetRecord) =>
+    new Date(
+      bet.match?.kickoffAt ?? bet.settledAt ?? bet.submittedAt,
+    ).getTime();
+
   return bettors.map((bettor) => {
     let total = 0;
     const data = bets
       .filter((bet) => bet.bettorId === bettor.id && bet.status === "settled")
-      .sort(
-        (a, b) =>
-          new Date(a.settledAt ?? 0).getTime() -
-          new Date(b.settledAt ?? 0).getTime(),
-      )
+      .sort((a, b) => getProfitTime(a) - getProfitTime(b))
       .map((bet) => {
         total += (bet.payout ?? 0) - bet.stake;
 
         return {
-          time: Math.floor(
-            new Date(bet.settledAt ?? bet.submittedAt).getTime() / 1000,
-          ),
+          time: Math.floor(getProfitTime(bet) / 1000),
           value: total,
         };
       });

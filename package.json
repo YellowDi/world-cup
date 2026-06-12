@@ -9,6 +9,7 @@
 		"db:migrate": "node scripts/migrate.mjs",
 		"build": "next build",
 		"start": "next start",
+		"start:lan": "next start -H 0.0.0.0",
 		"lint": "eslint --fix"
 	},
 	"dependencies": {

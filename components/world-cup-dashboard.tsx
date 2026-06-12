@@ -36,6 +36,7 @@ import { emptyDashboardSnapshot } from "@/lib/world-cup-data";
 
 const chartWindow = 60 * 60 * 24 * 5;
 const bettingWindowMs = 1000 * 60 * 60 * 24 * 7;
+const betBackfillWindowMs = 1000 * 60 * 60 * 24 * 2;
 const glassSurfaceClass =
   "overflow-hidden rounded-3xl border border-border bg-surface/80 shadow-lg backdrop-blur-md";
 
@@ -197,11 +198,15 @@ function getFormString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-export function WorldCupDashboard() {
+export function WorldCupDashboard({
+  initialSnapshot,
+}: {
+  initialSnapshot?: DashboardSnapshot;
+}) {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot>(
-    emptyDashboardSnapshot,
+    initialSnapshot ?? emptyDashboardSnapshot,
   );
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialSnapshot);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
@@ -808,16 +813,13 @@ function DashboardSidebar({
   );
   const bettableMatches = useMemo(() => {
     const now = Date.now();
-    const cutoff = now + bettingWindowMs;
+    const startsAt = now - betBackfillWindowMs;
+    const endsAt = now + bettingWindowMs;
 
     return snapshot.matches.filter((match) => {
       const kickoffTime = new Date(match.kickoffAt).getTime();
 
-      return (
-        match.status !== "finished" &&
-        kickoffTime >= now &&
-        kickoffTime <= cutoff
-      );
+      return kickoffTime >= startsAt && kickoffTime <= endsAt;
     });
   }, [snapshot.matches]);
   const matchOptions = useMemo(
@@ -1185,7 +1187,7 @@ function PendingSettlementsCard({
   return (
     <Disclosure
       aria-label="待结算"
-      className={`${glassSurfaceClass} min-h-0 shrink-0 lg:flex lg:max-h-80 lg:flex-col`}
+      className={`${glassSurfaceClass} min-h-0 shrink-0`}
       isExpanded={isExpanded}
       onExpandedChange={setIsExpanded}
     >
@@ -1207,8 +1209,8 @@ function PendingSettlementsCard({
           </span>
         </Disclosure.Trigger>
       </Disclosure.Heading>
-      <Disclosure.Content className="min-h-0 overflow-hidden lg:flex-1">
-        <div className="grid min-h-0 gap-2 overflow-y-auto border-t border-border px-3 pb-3 pt-3 lg:flex-1">
+      <Disclosure.Content className="overflow-hidden">
+        <div className="grid max-h-72 gap-2 overflow-y-auto border-t border-border px-3 pb-3 pt-3">
           {bets.length === 0 ? (
             <EmptyState text="暂无待结算下注。" />
           ) : (
@@ -1432,12 +1434,19 @@ function MaintenanceModal({
   status: ReactNode;
   title: string;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
     <Modal>
-      <Button fullWidth isDisabled={isDisabled} variant={buttonVariant}>
+      <Button
+        fullWidth
+        isDisabled={isDisabled}
+        variant={buttonVariant}
+        onPress={() => setIsOpen(true)}
+      >
         {buttonLabel}
       </Button>
-      <Modal.Backdrop variant="blur">
+      <Modal.Backdrop isOpen={isOpen} variant="blur" onOpenChange={setIsOpen}>
         <Modal.Container placement="center" scroll="inside" size="lg">
           <Modal.Dialog>
             <Modal.CloseTrigger />
@@ -1748,6 +1757,8 @@ function PendingBetSettlementModal({
   disabled: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
     <div className="grid gap-3 rounded-md border border-border bg-surface-secondary p-3">
       <div className="flex items-start justify-between gap-3">
@@ -1764,10 +1775,15 @@ function PendingBetSettlementModal({
             className="shrink-0"
             isDisabled={disabled}
             variant="secondary"
+            onPress={() => setIsOpen(true)}
           >
             结算
           </Button>
-          <Modal.Backdrop variant="blur">
+          <Modal.Backdrop
+            isOpen={isOpen}
+            variant="blur"
+            onOpenChange={setIsOpen}
+          >
             <Modal.Container placement="center" scroll="inside" size="md">
               <Modal.Dialog>
                 <Modal.CloseTrigger />

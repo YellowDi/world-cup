@@ -29,6 +29,8 @@ import {
   Tabs,
   Table,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@heroui/react";
 import { Liveline } from "liveline";
 
@@ -50,6 +52,7 @@ type BettorBetGroup = {
 };
 
 type BetType = "match-result" | "score" | "champion";
+type ChartMetric = "profit" | "payout";
 
 const resultPickOptions = [
   { label: "主胜", value: "主胜" },
@@ -151,7 +154,7 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "操作失败";
 }
 
-function getAllProfitChartWindow(series: DashboardSnapshot["series"]) {
+function getAllChartWindow(series: DashboardSnapshot["series"]) {
   let earliestTime = Infinity;
 
   for (const item of series) {
@@ -258,6 +261,7 @@ export function WorldCupDashboard({
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
   const [notice, setNotice] = useState("");
+  const [chartMetric, setChartMetric] = useState<ChartMetric>("profit");
 
   const loadDashboard = useCallback(async () => {
     setLoadError("");
@@ -305,7 +309,6 @@ export function WorldCupDashboard({
     };
   }, [loadDashboard]);
 
-  const leaderRows = useMemo(() => snapshot.rows.slice(0, 3), [snapshot.rows]);
   const dateTimeFormatter = useMemo(
     () => createDateTimeFormatter(snapshot.schedule.displayTimeZone),
     [snapshot.schedule.displayTimeZone],
@@ -314,8 +317,18 @@ export function WorldCupDashboard({
     () => createChartTimeFormatter(snapshot.schedule.displayTimeZone),
     [snapshot.schedule.displayTimeZone],
   );
-  const profitChartWindows = useMemo(() => {
-    const allWindow = getAllProfitChartWindow(snapshot.series);
+  const chartMetricSelection = useMemo(
+    () => new Set([chartMetric]),
+    [chartMetric],
+  );
+  const chartSeries =
+    chartMetric === "profit" ? snapshot.series : snapshot.payoutSeries;
+  const chartDescription =
+    chartMetric === "profit"
+      ? "已结算收益按比赛日期归集"
+      : "已结算返奖（含本金）按比赛日期归集";
+  const chartWindows = useMemo(() => {
+    const allWindow = getAllChartWindow(chartSeries);
 
     return [
       { label: "7D", secs: chartWindow },
@@ -323,7 +336,7 @@ export function WorldCupDashboard({
       { label: "24H", secs: secondsPerDay },
       { label: "全部", secs: allWindow },
     ];
-  }, [snapshot.series]);
+  }, [chartSeries]);
   const timeZoneLabel = getTimeZoneLabel(snapshot.schedule.displayTimeZone);
   const upcomingMatches = useMemo(() => {
     const now = Date.now();
@@ -516,25 +529,29 @@ export function WorldCupDashboard({
                 <h2 className="text-lg font-semibold text-foreground">
                   累计收益走势
                 </h2>
-                <p className="mt-1 text-sm text-muted">
-                  已结算收益按比赛日期归集
-                </p>
+                <p className="mt-1 text-sm text-muted">{chartDescription}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {leaderRows.map((row) => (
-                  <Chip key={row.id} variant="secondary">
-                    <span
-                      aria-hidden="true"
-                      className="size-2 rounded-full"
-                      style={{ backgroundColor: row.color }}
-                    />
-                    {row.name}
-                    <strong className={getProfitClass(row.profit)}>
-                      {formatSignedCurrency(row.profit)}
-                    </strong>
-                  </Chip>
-                ))}
-              </div>
+              <ToggleButtonGroup
+                disallowEmptySelection
+                aria-label="走势图口径"
+                className="shrink-0"
+                selectedKeys={chartMetricSelection}
+                selectionMode="single"
+                size="sm"
+                onSelectionChange={(keys) => {
+                  const selectedKey = Array.from(keys)[0];
+
+                  if (selectedKey === "profit" || selectedKey === "payout") {
+                    setChartMetric(selectedKey);
+                  }
+                }}
+              >
+                <ToggleButton id="profit">净收益</ToggleButton>
+                <ToggleButton id="payout">
+                  <ToggleButtonGroup.Separator />
+                  含本金
+                </ToggleButton>
+              </ToggleButtonGroup>
             </div>
 
             <div className="h-[380px] overflow-hidden px-3 pb-3 md:h-[500px]">
@@ -545,22 +562,24 @@ export function WorldCupDashboard({
                   pulse
                   scrub
                   data={[]}
-                  emptyText={isLoading ? "收益数据加载中" : "暂无收益数据"}
+                  emptyText={isLoading ? "数据加载中" : "暂无图表数据"}
                   formatTime={(time) =>
                     chartTimeFormatter(new Date(time * 1000))
                   }
                   formatValue={(value) =>
-                    `${value >= 0 ? "+" : ""}${Math.round(value)}元`
+                    chartMetric === "profit"
+                      ? `${value >= 0 ? "+" : ""}${Math.round(value)}元`
+                      : `${Math.round(value)}元`
                   }
                   lineWidth={2.5}
                   referenceLine={{ label: "0元", value: 0 }}
-                  series={snapshot.series}
+                  series={chartSeries}
                   style={{ flex: "1 1 0", height: "auto", minHeight: 0 }}
                   theme="dark"
                   value={0}
                   window={chartWindow}
                   windowStyle="rounded"
-                  windows={profitChartWindows}
+                  windows={chartWindows}
                 />
               </div>
             </div>

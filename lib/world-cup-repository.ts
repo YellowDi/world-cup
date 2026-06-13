@@ -252,11 +252,12 @@ function buildSummaries(bettors: Bettor[], bets: BetRecord[]): BettorSummary[] {
     }));
 }
 
-function buildProfitSeries(
+function buildBettorSeries(
   bettors: Bettor[],
   bets: BetRecord[],
+  getValue: (bet: BetRecord) => number,
 ): LivelineSeries[] {
-  const getProfitTime = (bet: BetRecord) =>
+  const getSeriesTime = (bet: BetRecord) =>
     new Date(
       bet.match?.kickoffAt ?? bet.settledAt ?? bet.submittedAt,
     ).getTime();
@@ -265,12 +266,12 @@ function buildProfitSeries(
     let total = 0;
     const data = bets
       .filter((bet) => bet.bettorId === bettor.id && bet.status === "settled")
-      .sort((a, b) => getProfitTime(a) - getProfitTime(b))
+      .sort((a, b) => getSeriesTime(a) - getSeriesTime(b))
       .map((bet) => {
-        total += (bet.payout ?? 0) - bet.stake;
+        total += getValue(bet);
 
         return {
-          time: Math.floor(getProfitTime(bet) / 1000),
+          time: Math.floor(getSeriesTime(bet) / 1000),
           value: total,
         };
       });
@@ -283,6 +284,24 @@ function buildProfitSeries(
       value: data[data.length - 1]?.value ?? 0,
     };
   });
+}
+
+function buildProfitSeries(
+  bettors: Bettor[],
+  bets: BetRecord[],
+): LivelineSeries[] {
+  return buildBettorSeries(
+    bettors,
+    bets,
+    (bet) => (bet.payout ?? 0) - bet.stake,
+  );
+}
+
+function buildPayoutSeries(
+  bettors: Bettor[],
+  bets: BetRecord[],
+): LivelineSeries[] {
+  return buildBettorSeries(bettors, bets, (bet) => bet.payout ?? 0);
 }
 
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
@@ -329,6 +348,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     bettors,
     matches,
     pendingBets: bets.filter((bet) => bet.status === "pending"),
+    payoutSeries: buildPayoutSeries(bettors, bets),
     recentBets: bets.slice(0, 20),
     rows: buildSummaries(bettors, bets),
     schedule: {

@@ -24,6 +24,19 @@ export class DataInputError extends Error {
   status = 400;
 }
 
+const bettorColorPalette = [
+  "#38bdf8",
+  "#34d399",
+  "#f59e0b",
+  "#fb7185",
+  "#a78bfa",
+  "#22d3ee",
+  "#84cc16",
+  "#f97316",
+  "#e879f9",
+  "#14b8a6",
+];
+
 type BettorRow = QueryResultRow & {
   id: string;
   name: string;
@@ -32,6 +45,10 @@ type BettorRow = QueryResultRow & {
   is_active: boolean;
   created_at: Date | string;
   updated_at: Date | string;
+};
+
+type BettorColorRow = QueryResultRow & {
+  color: string;
 };
 
 type MatchRow = QueryResultRow & {
@@ -86,7 +103,7 @@ type MatchSyncRow = QueryResultRow & {
 type CreateBettorInput = {
   name: string;
   team: string;
-  color: string;
+  color?: string;
 };
 
 type UpdateBettorInput = Partial<CreateBettorInput> & {
@@ -115,6 +132,47 @@ type RecordMatchSyncInput = {
   importedCount: number;
   usedCache: boolean;
 };
+
+function getBettorColorIndex(name: string) {
+  const hash = Array.from(name).reduce(
+    (total, character) => total + character.charCodeAt(0),
+    0,
+  );
+
+  return hash % bettorColorPalette.length;
+}
+
+function getAutomaticBettorColor(name: string, usedColors: string[]) {
+  const preferredIndex = getBettorColorIndex(name);
+  const usedColorSet = new Set(usedColors.map((color) => color.toLowerCase()));
+
+  for (let offset = 0; offset < bettorColorPalette.length; offset += 1) {
+    const color =
+      bettorColorPalette[(preferredIndex + offset) % bettorColorPalette.length];
+
+    if (!usedColorSet.has(color.toLowerCase())) {
+      return color;
+    }
+  }
+
+  return bettorColorPalette[preferredIndex];
+}
+
+async function resolveBettorColor(name: string, color: string | undefined) {
+  if (color !== undefined) {
+    return color;
+  }
+
+  const colorResult = await query<BettorColorRow>(
+    `SELECT color
+     FROM bettors`,
+  );
+
+  return getAutomaticBettorColor(
+    name,
+    colorResult.rows.map((row) => row.color),
+  );
+}
 
 function toIso(value: Date | string) {
   return value instanceof Date
@@ -365,11 +423,12 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
 }
 
 export async function createBettor(input: CreateBettorInput) {
+  const color = await resolveBettorColor(input.name, input.color);
   const result = await query<BettorRow>(
     `INSERT INTO bettors (id, name, team, color)
      VALUES ($1, $2, $3, $4)
      RETURNING id, name, team, color, is_active, created_at, updated_at`,
-    [randomUUID(), input.name, input.team, input.color],
+    [randomUUID(), input.name, input.team, color],
   );
 
   return toBettor(result.rows[0]);

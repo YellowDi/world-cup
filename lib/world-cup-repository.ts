@@ -314,22 +314,84 @@ function buildBettorSeries(
   bettors: Bettor[],
   bets: BetRecord[],
   getValue: (bet: BetRecord) => number,
+  timeZone: string,
 ): LivelineSeries[] {
-  const getSeriesTime = (bet: BetRecord) =>
-    new Date(
+  const dateFormatter = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone,
+    year: "numeric",
+  });
+  const offsetFormatter = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    month: "2-digit",
+    second: "2-digit",
+    timeZone,
+    year: "numeric",
+  });
+  const getDateParts = (formatter: Intl.DateTimeFormat, date: Date) => {
+    const parts = formatter.formatToParts(date);
+    const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+      Number(parts.find((part) => part.type === type)?.value);
+
+    return {
+      day: getPart("day"),
+      hour: getPart("hour"),
+      minute: getPart("minute"),
+      month: getPart("month"),
+      second: getPart("second"),
+      year: getPart("year"),
+    };
+  };
+  const getOffsetMs = (date: Date) => {
+    const parts = getDateParts(offsetFormatter, date);
+
+    return (
+      Date.UTC(
+        parts.year,
+        parts.month - 1,
+        parts.day,
+        parts.hour,
+        parts.minute,
+        parts.second,
+      ) - date.getTime()
+    );
+  };
+  const getSeriesTime = (bet: BetRecord) => {
+    const baseDate = new Date(
       bet.match?.kickoffAt ?? bet.settledAt ?? bet.submittedAt,
-    ).getTime();
+    );
+    const parts = getDateParts(dateFormatter, baseDate);
+    const utcDate = Date.UTC(parts.year, parts.month - 1, parts.day);
+    const offsetMs = getOffsetMs(new Date(utcDate));
+
+    return utcDate - offsetMs;
+  };
 
   return bettors.map((bettor) => {
     let total = 0;
-    const data = bets
-      .filter((bet) => bet.bettorId === bettor.id && bet.status === "settled")
-      .sort((a, b) => getSeriesTime(a) - getSeriesTime(b))
-      .map((bet) => {
-        total += getValue(bet);
+    const valuesByDay = new Map<number, number>();
+
+    for (const bet of bets) {
+      if (bet.bettorId !== bettor.id || bet.status !== "settled") {
+        continue;
+      }
+
+      const time = getSeriesTime(bet);
+
+      valuesByDay.set(time, (valuesByDay.get(time) ?? 0) + getValue(bet));
+    }
+
+    const data = Array.from(valuesByDay)
+      .sort(([a], [b]) => a - b)
+      .map(([time, value]) => {
+        total += value;
 
         return {
-          time: Math.floor(getSeriesTime(bet) / 1000),
+          time: Math.floor(time / 1000),
           value: total,
         };
       });
@@ -347,26 +409,30 @@ function buildBettorSeries(
 function buildProfitSeries(
   bettors: Bettor[],
   bets: BetRecord[],
+  timeZone: string,
 ): LivelineSeries[] {
   return buildBettorSeries(
     bettors,
     bets,
     (bet) => (bet.payout ?? 0) - bet.stake,
+    timeZone,
   );
 }
 
 function buildPayoutSeries(
   bettors: Bettor[],
   bets: BetRecord[],
+  timeZone: string,
 ): LivelineSeries[] {
-  return buildBettorSeries(bettors, bets, (bet) => bet.payout ?? 0);
+  return buildBettorSeries(bettors, bets, (bet) => bet.payout ?? 0, timeZone);
 }
 
 function buildStakeSeries(
   bettors: Bettor[],
   bets: BetRecord[],
+  timeZone: string,
 ): LivelineSeries[] {
-  return buildBettorSeries(bettors, bets, (bet) => bet.stake);
+  return buildBettorSeries(bettors, bets, (bet) => bet.stake, timeZone);
 }
 
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
@@ -406,6 +472,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   const matches = matchResult.rows.map(toMatch);
   const bets = betResult.rows.map(toBetRecord);
   const syncState = syncResult.rows[0];
+  const displayTimeZone = getScheduleDisplayTimeZone();
 
   return {
     activeBettors: bettors.filter((bettor) => bettor.isActive),
@@ -413,11 +480,11 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     bettors,
     matches,
     pendingBets: bets.filter((bet) => bet.status === "pending"),
-    payoutSeries: buildPayoutSeries(bettors, bets),
+    payoutSeries: buildPayoutSeries(bettors, bets, displayTimeZone),
     recentBets: bets.slice(0, 20),
     rows: buildSummaries(bettors, bets),
     schedule: {
-      displayTimeZone: getScheduleDisplayTimeZone(),
+      displayTimeZone,
       importedCount: syncState?.imported_count ?? 0,
       lastSyncedAt: syncState ? toIso(syncState.synced_at) : null,
       sourceKey: syncState?.source_key ?? openfootballSourceKey,
@@ -425,8 +492,8 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       sourceUrl: syncState?.source_url ?? openfootballSourceUrl,
       usedCache: syncState?.used_cache ?? false,
     },
-    series: buildProfitSeries(bettors, bets),
-    stakeSeries: buildStakeSeries(bettors, bets),
+    series: buildProfitSeries(bettors, bets, displayTimeZone),
+    stakeSeries: buildStakeSeries(bettors, bets, displayTimeZone),
   };
 }
 

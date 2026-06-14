@@ -94,26 +94,8 @@ function createChartTimeFormatter(timeZone: string) {
     month: "long",
     timeZone,
   });
-  const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
-    day: "numeric",
-    hour: "2-digit",
-    hour12: false,
-    minute: "2-digit",
-    month: "long",
-    timeZone,
-  });
 
-  return (date: Date) => {
-    const parts = dateTimeFormatter.formatToParts(date);
-    const hour = parts.find((part) => part.type === "hour")?.value;
-    const minute = parts.find((part) => part.type === "minute")?.value;
-
-    if ((hour === "00" || hour === "24") && minute === "00") {
-      return dateFormatter.format(date);
-    }
-
-    return dateTimeFormatter.format(date);
-  };
+  return (date: Date) => dateFormatter.format(date);
 }
 
 function getTimeZoneLabel(timeZone: string) {
@@ -335,9 +317,9 @@ export function WorldCupDashboard({
     stake: snapshot.stakeSeries,
   } satisfies Record<ChartMetric, DashboardSnapshot["series"]>;
   const chartDescriptionByMetric = {
-    payout: "已结算返奖额按比赛日期归集",
-    profit: "已结算净收益按比赛日期归集",
-    stake: "已结算投入额按比赛日期归集",
+    payout: "已结算返奖额按比赛日归集",
+    profit: "已结算净收益按比赛日归集",
+    stake: "已结算投入额按比赛日归集",
   } satisfies Record<ChartMetric, string>;
   const chartSeries = chartSeriesByMetric[chartMetric];
   const chartDescription = chartDescriptionByMetric[chartMetric];

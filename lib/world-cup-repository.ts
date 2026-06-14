@@ -362,6 +362,13 @@ function buildPayoutSeries(
   return buildBettorSeries(bettors, bets, (bet) => bet.payout ?? 0);
 }
 
+function buildStakeSeries(
+  bettors: Bettor[],
+  bets: BetRecord[],
+): LivelineSeries[] {
+  return buildBettorSeries(bettors, bets, (bet) => bet.stake);
+}
+
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   const [bettorResult, matchResult, betResult, syncResult] = await Promise.all([
     query<BettorRow>(
@@ -419,6 +426,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
       usedCache: syncState?.used_cache ?? false,
     },
     series: buildProfitSeries(bettors, bets),
+    stakeSeries: buildStakeSeries(bettors, bets),
   };
 }
 

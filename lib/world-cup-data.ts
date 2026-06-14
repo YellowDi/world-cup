@@ -97,6 +97,7 @@ export type DashboardSnapshot = {
   schedule: ScheduleSnapshot;
   payoutSeries: LivelineSeries[];
   series: LivelineSeries[];
+  stakeSeries: LivelineSeries[];
 };
 
 export const emptyDashboardSnapshot: DashboardSnapshot = {
@@ -119,4 +120,5 @@ export const emptyDashboardSnapshot: DashboardSnapshot = {
     usedCache: false,
   },
   series: [],
+  stakeSeries: [],
 };

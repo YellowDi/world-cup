@@ -53,7 +53,7 @@ type BettorBetGroup = {
 };
 
 type BetType = "match-result" | "score" | "champion";
-type ChartMetric = "profit" | "payout";
+type ChartMetric = "profit" | "payout" | "stake";
 
 const resultPickOptions = [
   { label: "主胜", value: "主胜" },
@@ -321,12 +321,18 @@ export function WorldCupDashboard({
     () => new Set([chartMetric]),
     [chartMetric],
   );
-  const chartSeries =
-    chartMetric === "profit" ? snapshot.series : snapshot.payoutSeries;
-  const chartDescription =
-    chartMetric === "profit"
-      ? "已结算收益按比赛日期归集"
-      : "已结算返奖（含本金）按比赛日期归集";
+  const chartSeriesByMetric = {
+    payout: snapshot.payoutSeries,
+    profit: snapshot.series,
+    stake: snapshot.stakeSeries,
+  } satisfies Record<ChartMetric, DashboardSnapshot["series"]>;
+  const chartDescriptionByMetric = {
+    payout: "已结算返奖额按比赛日期归集",
+    profit: "已结算净收益按比赛日期归集",
+    stake: "已结算投入额按比赛日期归集",
+  } satisfies Record<ChartMetric, string>;
+  const chartSeries = chartSeriesByMetric[chartMetric];
+  const chartDescription = chartDescriptionByMetric[chartMetric];
   const chartWindows = useMemo(() => {
     const allWindow = getAllChartWindow(chartSeries);
 
@@ -526,7 +532,7 @@ export function WorldCupDashboard({
             <div className="flex flex-col justify-between gap-3 p-3 md:flex-row md:items-end">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
-                  累计收益走势
+                  累计资金走势
                 </h2>
                 <p className="mt-1 text-sm text-muted">{chartDescription}</p>
               </div>
@@ -540,7 +546,11 @@ export function WorldCupDashboard({
                 onSelectionChange={(keys) => {
                   const selectedKey = Array.from(keys)[0];
 
-                  if (selectedKey === "profit" || selectedKey === "payout") {
+                  if (
+                    selectedKey === "profit" ||
+                    selectedKey === "payout" ||
+                    selectedKey === "stake"
+                  ) {
                     setChartMetric(selectedKey);
                   }
                 }}
@@ -548,7 +558,11 @@ export function WorldCupDashboard({
                 <ToggleButton id="profit">净收益</ToggleButton>
                 <ToggleButton id="payout">
                   <ToggleButtonGroup.Separator />
-                  含本金
+                  返奖额
+                </ToggleButton>
+                <ToggleButton id="stake">
+                  <ToggleButtonGroup.Separator />
+                  投入额
                 </ToggleButton>
               </ToggleButtonGroup>
             </div>

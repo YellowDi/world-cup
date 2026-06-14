@@ -43,6 +43,7 @@ const bettingWindowMs = 1000 * 60 * 60 * 24 * 7;
 const betBackfillWindowMs = 1000 * 60 * 60 * 24 * 2;
 const glassSurfaceClass =
   "overflow-hidden rounded-3xl border border-border bg-surface/80 shadow-lg backdrop-blur-md";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 type BettorBetGroup = {
   id: string;
@@ -155,6 +156,10 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "操作失败";
 }
 
+function withBasePath(path: `/${string}`) {
+  return `${basePath}${path}`;
+}
+
 function getAllChartWindow(series: DashboardSnapshot["series"]) {
   let earliestTime = Infinity;
 
@@ -173,8 +178,11 @@ function getAllChartWindow(series: DashboardSnapshot["series"]) {
   );
 }
 
-async function requestJson<T = unknown>(path: string, init?: RequestInit) {
-  const response = await fetch(path, {
+async function requestJson<T = unknown>(
+  path: `/${string}`,
+  init?: RequestInit,
+) {
+  const response = await fetch(withBasePath(path), {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -266,7 +274,7 @@ export function WorldCupDashboard({
   const loadDashboard = useCallback(async () => {
     setLoadError("");
 
-    const response = await fetch("/api/dashboard");
+    const response = await fetch(withBasePath("/api/dashboard"));
     const payload = (await response.json().catch(() => null)) as
       | DashboardSnapshot
       | { error?: string }
@@ -516,7 +524,7 @@ export function WorldCupDashboard({
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-0 -z-10 h-full min-h-dvh w-screen -translate-x-1/2 bg-top bg-no-repeat opacity-25"
         style={{
-          backgroundImage: "url('/hero.png')",
+          backgroundImage: `url('${withBasePath("/hero.png")}')`,
           backgroundSize: "100% auto",
           maskImage:
             "linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%)",

@@ -31,6 +31,7 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  toast,
 } from "@heroui/react";
 import { Liveline } from "liveline";
 
@@ -260,7 +261,6 @@ export function WorldCupDashboard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
-  const [notice, setNotice] = useState("");
   const [chartMetric, setChartMetric] = useState<ChartMetric>("profit");
 
   const loadDashboard = useCallback(async () => {
@@ -387,13 +387,12 @@ export function WorldCupDashboard({
     action: () => Promise<void>,
   ) {
     setActionError("");
-    setNotice("");
     setIsSubmitting(true);
 
     try {
       await action();
       await loadDashboard();
-      setNotice(successMessage);
+      toast.success(successMessage);
     } catch (error) {
       setActionError(getErrorMessage(error));
     } finally {
@@ -595,7 +594,6 @@ export function WorldCupDashboard({
           isLoading={isLoading}
           isSubmitting={isSubmitting}
           loadError={loadError}
-          notice={notice}
           snapshot={snapshot}
           timeZoneLabel={timeZoneLabel}
           upcomingMatches={upcomingMatches}
@@ -747,7 +745,6 @@ function SidebarMaintenanceActions({
   isLoading,
   isSubmitting,
   loadError,
-  notice,
   snapshot,
   timeZoneLabel,
   upcomingMatches,
@@ -760,7 +757,6 @@ function SidebarMaintenanceActions({
   isLoading: boolean;
   isSubmitting: boolean;
   loadError: string;
-  notice: string;
   snapshot: DashboardSnapshot;
   timeZoneLabel: string;
   upcomingMatches: Match[];
@@ -780,7 +776,6 @@ function SidebarMaintenanceActions({
               actionError={actionError}
               isLoading={isLoading}
               loadError={loadError}
-              notice={notice}
             />
           }
           title="同事名单"
@@ -817,7 +812,6 @@ function SidebarMaintenanceActions({
               actionError={actionError}
               isLoading={isLoading}
               loadError={loadError}
-              notice={notice}
             />
           }
           title="赛历同步"
@@ -876,7 +870,6 @@ function DashboardSidebar({
   isLoading,
   isSubmitting,
   loadError,
-  notice,
   snapshot,
   timeZoneLabel,
   upcomingMatches,
@@ -892,7 +885,6 @@ function DashboardSidebar({
   isLoading: boolean;
   isSubmitting: boolean;
   loadError: string;
-  notice: string;
   snapshot: DashboardSnapshot;
   timeZoneLabel: string;
   upcomingMatches: Match[];
@@ -989,7 +981,6 @@ function DashboardSidebar({
               actionError={actionError}
               isLoading={isLoading}
               loadError={loadError}
-              notice={notice}
             />
           }
           title="提交下注"
@@ -1136,7 +1127,6 @@ function DashboardSidebar({
           isLoading={isLoading}
           isSubmitting={isSubmitting}
           loadError={loadError}
-          notice={notice}
           snapshot={snapshot}
           timeZoneLabel={timeZoneLabel}
           upcomingMatches={upcomingMatches}
@@ -1486,22 +1476,18 @@ function StatusMessage({
   actionError,
   isLoading,
   loadError,
-  notice,
 }: {
   actionError: string;
   isLoading: boolean;
   loadError: string;
-  notice: string;
 }) {
-  const message =
-    loadError || actionError || notice || (isLoading ? "加载中" : "");
+  const message = loadError || actionError || (isLoading ? "加载中" : "");
 
   if (!message) {
     return null;
   }
 
-  const status =
-    loadError || actionError ? "danger" : notice ? "success" : "accent";
+  const status = loadError || actionError ? "danger" : "accent";
 
   return (
     <Alert status={status}>

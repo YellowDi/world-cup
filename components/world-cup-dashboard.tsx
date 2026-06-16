@@ -677,7 +677,7 @@ function ProfitTable({ rows }: { rows: DashboardSnapshot["rows"] }) {
           >
             <Table.Header>
               <Table.Column className="w-10 px-1.5">排名</Table.Column>
-              <Table.Column isRowHeader className="w-20 px-1.5">
+              <Table.Column isRowHeader className="w-32 px-1.5">
                 同事
               </Table.Column>
               <Table.Column className="w-[4.5rem] px-1.5 text-right">
@@ -691,9 +691,6 @@ function ProfitTable({ rows }: { rows: DashboardSnapshot["rows"] }) {
               </Table.Column>
               <Table.Column className="w-16 px-1.5 text-right">
                 返奖
-              </Table.Column>
-              <Table.Column className="w-12 px-1.5 text-right">
-                命中率
               </Table.Column>
               <Table.Column className="w-16 px-1.5">优势玩法</Table.Column>
               <Table.Column className="px-1.5">最新选择</Table.Column>
@@ -759,11 +756,6 @@ function ProfitTable({ rows }: { rows: DashboardSnapshot["rows"] }) {
                       className={`px-1.5 text-right tabular-nums ${lastRowBorderClass}`}
                     >
                       {formatCurrency(row.payout)}
-                    </Table.Cell>
-                    <Table.Cell
-                      className={`px-1.5 text-right tabular-nums ${lastRowBorderClass}`}
-                    >
-                      {row.wins}/{row.settled}
                     </Table.Cell>
                     <Table.Cell className={`px-1.5 ${lastRowBorderClass}`}>
                       <span className="block truncate">{row.bestMarket}</span>

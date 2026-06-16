@@ -26,6 +26,7 @@ import {
   ScrollShadow,
   Select,
   Surface,
+  Switch,
   Tabs,
   Table,
   TextField,
@@ -257,6 +258,7 @@ export function WorldCupDashboard({
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
   const [chartMetric, setChartMetric] = useState<ChartMetric>("profit");
+  const [isSelfDeceptionEnabled, setIsSelfDeceptionEnabled] = useState(false);
   const isActionRunningRef = useRef(false);
 
   const loadDashboard = useCallback(async () => {
@@ -319,9 +321,21 @@ export function WorldCupDashboard({
     () => new Set([chartMetric]),
     [chartMetric],
   );
+  const deceptiveProfitSeries = useMemo(
+    () =>
+      snapshot.series.map((item) => ({
+        ...item,
+        data: item.data.map((point) => ({
+          ...point,
+          value: -point.value,
+        })),
+        value: -item.value,
+      })),
+    [snapshot.series],
+  );
   const chartSeriesByMetric = {
     payout: snapshot.payoutSeries,
-    profit: snapshot.series,
+    profit: isSelfDeceptionEnabled ? deceptiveProfitSeries : snapshot.series,
     stake: snapshot.stakeSeries,
   } satisfies Record<ChartMetric, DashboardSnapshot["series"]>;
   const chartDescriptionByMetric = {
@@ -568,35 +582,50 @@ export function WorldCupDashboard({
                 </h2>
                 <p className="mt-1 text-sm text-muted">{chartDescription}</p>
               </div>
-              <ToggleButtonGroup
-                disallowEmptySelection
-                aria-label="走势图口径"
-                className="shrink-0"
-                selectedKeys={chartMetricSelection}
-                selectionMode="single"
-                size="sm"
-                onSelectionChange={(keys) => {
-                  const selectedKey = Array.from(keys)[0];
+              <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                <Switch
+                  aria-label="自欺欺人"
+                  isSelected={isSelfDeceptionEnabled}
+                  size="sm"
+                  onChange={setIsSelfDeceptionEnabled}
+                >
+                  <Switch.Control>
+                    <Switch.Thumb />
+                  </Switch.Control>
+                  <Switch.Content className="text-sm font-medium text-foreground">
+                    自欺欺人
+                  </Switch.Content>
+                </Switch>
+                <ToggleButtonGroup
+                  disallowEmptySelection
+                  aria-label="走势图口径"
+                  className="shrink-0"
+                  selectedKeys={chartMetricSelection}
+                  selectionMode="single"
+                  size="sm"
+                  onSelectionChange={(keys) => {
+                    const selectedKey = Array.from(keys)[0];
 
-                  if (
-                    selectedKey === "profit" ||
-                    selectedKey === "payout" ||
-                    selectedKey === "stake"
-                  ) {
-                    setChartMetric(selectedKey);
-                  }
-                }}
-              >
-                <ToggleButton id="profit">净收益</ToggleButton>
-                <ToggleButton id="payout">
-                  <ToggleButtonGroup.Separator />
-                  返奖额
-                </ToggleButton>
-                <ToggleButton id="stake">
-                  <ToggleButtonGroup.Separator />
-                  投入额
-                </ToggleButton>
-              </ToggleButtonGroup>
+                    if (
+                      selectedKey === "profit" ||
+                      selectedKey === "payout" ||
+                      selectedKey === "stake"
+                    ) {
+                      setChartMetric(selectedKey);
+                    }
+                  }}
+                >
+                  <ToggleButton id="profit">净收益</ToggleButton>
+                  <ToggleButton id="payout">
+                    <ToggleButtonGroup.Separator />
+                    返奖额
+                  </ToggleButton>
+                  <ToggleButton id="stake">
+                    <ToggleButtonGroup.Separator />
+                    投入额
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </div>
             </div>
 
             <div className="h-[380px] overflow-hidden px-3 pb-3 md:h-[500px]">

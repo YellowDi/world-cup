@@ -522,10 +522,33 @@ export function WorldCupDashboard({
     }
 
     const isWin = result === "true";
-    const odds = Number(getFormString(formData, "odds"));
+    const oddsInput = getFormString(formData, "odds");
+    const payoutInput = getFormString(formData, "payout");
+    const hasOdds = oddsInput !== "";
+    const hasPayout = payoutInput !== "";
+    const odds = Number(oddsInput);
+    const payout = Number(payoutInput);
 
-    if (isWin && (!Number.isFinite(odds) || odds <= 0)) {
+    if (isWin && hasOdds && hasPayout) {
+      setActionError("命中倍率和返奖金额只能填写一个");
+
+      return;
+    }
+
+    if (isWin && !hasOdds && !hasPayout) {
+      setActionError("命中时需填写命中倍率或返奖金额");
+
+      return;
+    }
+
+    if (isWin && hasOdds && (!Number.isFinite(odds) || odds <= 0)) {
       setActionError("命中倍率必须大于 0");
+
+      return;
+    }
+
+    if (isWin && hasPayout && (!Number.isFinite(payout) || payout <= 0)) {
+      setActionError("返奖金额必须大于 0");
 
       return;
     }
@@ -536,7 +559,8 @@ export function WorldCupDashboard({
         await requestJson(`/api/bets/${id}/settle`, {
           body: JSON.stringify({
             isWin,
-            odds: isWin ? odds : 0,
+            ...(isWin && hasOdds ? { odds } : {}),
+            ...(isWin && hasPayout ? { payout } : {}),
           }),
           method: "PATCH",
         });
@@ -1982,6 +2006,13 @@ function PendingBetSettlementModal({
                       label="命中倍率（未中留空）"
                       min="0.01"
                       name="odds"
+                      step="0.01"
+                      type="number"
+                    />
+                    <Field
+                      label="返奖金额（过关）"
+                      min="0.01"
+                      name="payout"
                       step="0.01"
                       type="number"
                     />

@@ -121,7 +121,8 @@ type CreateBetInput = {
 type SettleBetInput = {
   id: string;
   isWin: boolean;
-  odds: number;
+  odds?: number;
+  payout?: number;
 };
 
 type RecordMatchSyncInput = {
@@ -576,16 +577,28 @@ export async function createPendingBet(input: CreateBetInput) {
 }
 
 export async function settleBet(input: SettleBetInput) {
+  if (input.isWin && input.odds !== undefined && input.payout !== undefined) {
+    throw new DataInputError("命中倍率和返奖金额只能填写一个");
+  }
+
+  if (input.isWin && input.odds === undefined && input.payout === undefined) {
+    throw new DataInputError("命中时需填写命中倍率或返奖金额");
+  }
+
   const result = await query(
     `UPDATE bets
      SET status = 'settled',
-         payout = CASE WHEN $2 THEN round(stake * $3::numeric, 2) ELSE 0 END,
+         payout = CASE
+           WHEN NOT $2 THEN 0
+           WHEN $4::numeric IS NOT NULL THEN round($4::numeric, 2)
+           ELSE round(stake * $3::numeric, 2)
+         END,
          is_win = $2,
          settled_at = now(),
          updated_at = now()
      WHERE id = $1 AND status = 'pending'
      RETURNING id`,
-    [input.id, input.isWin, input.odds],
+    [input.id, input.isWin, input.odds ?? null, input.payout ?? null],
   );
 
   if (result.rowCount === 0) {
